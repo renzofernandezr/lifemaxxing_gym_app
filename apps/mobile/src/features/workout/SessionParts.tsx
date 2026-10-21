@@ -2,7 +2,7 @@
 // tira de ejercicios (uno a la vez, como Fitbod) · tabla de series con "Anterior" y ✓ (como Hevy/Strong) ·
 // panel inferior fijo con los steppers grandes y el botón de registrar.
 import { calibrate, EQUIPMENT_NAME, fk, SCHEME_NAME, unitLabel, weightText, type LoadSuggestion } from "@lifemaxxing/core";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { IconCheck, IconChevron } from "../../components/icons";
 import { platesText } from "../../components/plates";
@@ -114,6 +114,14 @@ export function ExerciseStrip({ a, curEi }: { a: ActiveWorkout; curEi: number })
 export function ExerciseHeader({ a, it }: { a: ActiveWorkout; it: PlannedItem }) {
   const { c } = useTheme();
   const [showCue, setShowCue] = useState(false);
+  // "Saltar" pide un segundo toque (antes se saltaba el ejercicio entero sin querer).
+  const [confirmSkip, setConfirmSkip] = useState(false);
+  useEffect(() => {
+    if (!confirmSkip) return;
+    const t = setTimeout(() => setConfirmSkip(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmSkip]);
+  useEffect(() => setConfirmSkip(false), [it.ei]);
   const re = a.routine.exercises[it.ei];
   const alt = !!a.useAlt[re.id];
   const ex = resolveRe(re, alt);
@@ -149,8 +157,19 @@ export function ExerciseHeader({ a, it }: { a: ActiveWorkout; it: PlannedItem })
             .filter(Boolean)
             .join(" · ")}
         </T>
-        <Pressable onPress={() => skipCurrentExercise()} accessibilityRole="button" accessibilityLabel="Saltar este ejercicio" hitSlop={8}>
-          <T style={{ fontFamily: F.semibold, fontSize: 13, color: c.accentInk }}>Saltar</T>
+        <Pressable
+          onPress={() => {
+            if (confirmSkip) {
+              setConfirmSkip(false);
+              skipCurrentExercise();
+            } else setConfirmSkip(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={confirmSkip ? "Confirmar: saltar este ejercicio" : "Saltar este ejercicio"}
+          hitSlop={8}
+          style={confirmSkip ? { backgroundColor: c.accent, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 } : undefined}
+        >
+          <T style={{ fontFamily: F.semibold, fontSize: 13, color: confirmSkip ? c.onAccent : c.accentInk }}>{confirmSkip ? "¿Saltar? Toca otra vez" : "Saltar"}</T>
         </Pressable>
       </View>
       <T

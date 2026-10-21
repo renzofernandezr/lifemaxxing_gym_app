@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppState, Platform } from "react-native";
 import { useWorkout, type PendingOp } from "../store/workout";
 import { api, ApiError } from "./api";
+import { skipRest } from "./rest";
 
 type Listener = (msg: string) => void;
 let onDrop: Listener | null = null;
@@ -46,9 +47,20 @@ export function flushQueue(): Promise<boolean> {
           return false;
         }
         if (e.status === 401) return false; // el AuthProvider manda a login; la cola se conserva
+        if (e.status === 404) {
+          // La sesión ya no existe en el servidor: se descartan sus operaciones y la copia local.
+          const s = useWorkout.getState();
+          s.dropOps(s.queue.filter((q) => q.sessionId === op.sessionId).map((q) => q.id));
+          if (s.active?.sessionId === op.sessionId) {
+            await skipRest();
+            s.setActive(null);
+            onDrop?.("Esta sesión ya no existe en el servidor. Puedes empezar otra.");
+          }
+          continue;
+        }
         // Error definitivo (sesión cerrada, datos inválidos…): se descarta para no bloquear la cola.
         useWorkout.getState().removeOp(op);
-        onDrop?.(e.message);
+        onDrop?.(`No se guardó una serie: ${e.message}`);
       }
     }
   })();

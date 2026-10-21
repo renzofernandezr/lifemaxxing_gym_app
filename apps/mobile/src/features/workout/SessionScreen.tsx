@@ -13,7 +13,7 @@ import { ApiError } from "../../lib/api";
 import { useWorkout, useWorkoutHydrated, type ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
 import { F } from "../../theme/tokens";
-import { discardWorkout, editDoneSet, finishWorkout, logSet, SyncPending } from "./actions";
+import { discardWorkout, editDoneSet, finishWorkout, logSet, SessionGone, SyncPending, unskipAll } from "./actions";
 import { draftFor, parseNum, type Draft } from "./draft";
 import { nextPending, progress } from "./logic";
 import { Dock, ExerciseHeader, ExerciseStrip, SetList } from "./SessionParts";
@@ -100,6 +100,10 @@ function Live({ a }: { a: ActiveWorkout }) {
     try {
       await finishWorkout();
     } catch (err) {
+      if (err instanceof SessionGone) {
+        toast(err.message, "info");
+        return;
+      }
       const msg =
         err instanceof SyncPending
           ? err.message
@@ -116,6 +120,20 @@ function Live({ a }: { a: ActiveWorkout }) {
   };
 
   const readDraft = () => ({ w: parseNum(draft.w), r: parseInt(draft.r, 10) || 0 });
+
+  const discard = async () => {
+    try {
+      const r = await discardWorkout(a.sessionId, { onlyInProgress: true });
+      setConfirmEnd(false);
+      if (r === "finished") toast("Ese entreno ya estaba terminado: quedó en tu historial", "info");
+      else {
+        toast("Sesión descartada", "info");
+        router.dismissTo("/entrenar");
+      }
+    } catch (err) {
+      setFinishError((err as Error).message);
+    }
+  };
 
   const onLog = async () => {
     if (!cur || busy) return;
@@ -138,11 +156,26 @@ function Live({ a }: { a: ActiveWorkout }) {
   };
 
   if (!cur || !it) {
+    // No queda nada pendiente: porque se hizo todo o porque se saltaron ejercicios.
+    const doneWork = a.items.some((x) => x.done && x.kind === "work");
+    const skipped = a.items.some((x) => x.skip && !x.done);
     return (
-      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: "center", alignItems: "center", gap: 14, padding: 24 }}>
-        <T v="h2">Completaste todas las series</T>
-        <Button variant="primary" title="Ver resumen" loading={busy} onPress={finish} />
-        {finishError ? <T v="small" color={c.bad}>{finishError}</T> : null}
+      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: "center", padding: 24, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }}>
+        <View style={{ width: "100%", maxWidth: 420, alignSelf: "center", gap: 12 }}>
+          <T v="h2">{skipped && !doneWork ? "Saltaste todos los ejercicios" : skipped ? "No quedan series pendientes" : "Completaste todas las series"}</T>
+          <T v="small" muted>
+            {skipped ? "Puedes retomar los ejercicios que saltaste, terminar con lo que registraste o descartar la sesión." : "Termina para ver tu resumen y el próximo peso de cada ejercicio."}
+          </T>
+          {finishError ? (
+            <T v="small" color={c.bad} accessibilityRole="alert">
+              {finishError}
+            </T>
+          ) : null}
+          {skipped ? <Button variant={doneWork ? "secondary" : "primary"} title="Retomar ejercicios saltados" onPress={() => unskipAll()} /> : null}
+          {doneWork ? <Button variant="primary" title="Terminar y ver resumen" loading={busy} onPress={finish} /> : null}
+          <Button variant="danger" title="Descartar sesión" disabled={busy} onPress={discard} />
+          <Button variant="ghost" title="Volver a Entrenar" onPress={close} />
+        </View>
       </View>
     );
   }
@@ -216,24 +249,7 @@ function Live({ a }: { a: ActiveWorkout }) {
         ) : null}
         <Button variant="primary" title="Terminar y ver resumen" loading={busy} onPress={finish} />
         <Button title="Seguir entrenando" onPress={() => setConfirmEnd(false)} />
-        <Button
-          variant="danger"
-          title="Descartar sesión"
-          disabled={busy}
-          onPress={async () => {
-            try {
-              const r = await discardWorkout(a.sessionId, { onlyInProgress: true });
-              setConfirmEnd(false);
-              if (r === "finished") toast("Ese entreno ya estaba terminado: quedó en tu historial", "info");
-              else {
-                toast("Sesión descartada", "info");
-                router.dismissTo("/entrenar");
-              }
-            } catch (err) {
-              setFinishError((err as Error).message);
-            }
-          }}
-        />
+        <Button variant="danger" title="Descartar sesión" disabled={busy} onPress={discard} />
         <T v="tiny" muted style={{ fontFamily: F.medium }}>
           Descartar borra la sesión del historial y de tus estadísticas.
         </T>

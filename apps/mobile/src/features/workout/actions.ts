@@ -206,6 +206,22 @@ export function setRir(rir: number) {
   st().patchActive({ rir });
 }
 
+/** Vuelve a poner como pendientes las series saltadas (para retomar ejercicios). */
+export function unskipAll() {
+  const a = st().active;
+  if (!a) return;
+  const items = a.items.map((x) => (x.skip && !x.done ? { ...x, skip: false } : x));
+  const next = nextPending(items, 0);
+  st().patchActive({ items, i: next === -1 ? a.i : next });
+}
+
+/** La sesión ya no existe en el servidor (borrada, o se reinició el modo demo): se limpia la copia local. */
+export class SessionGone extends Error {
+  constructor() {
+    super("Esta sesión ya no existe en el servidor. Puedes empezar otra.");
+  }
+}
+
 export function skipCurrentExercise(): boolean {
   const a = st().active;
   if (!a) return false;
@@ -265,6 +281,12 @@ export async function finishWorkout(): Promise<SessionSummary> {
   try {
     summary = await api<SessionSummary>(`/api/sessions/${a.sessionId}/finish`, { method: "POST" });
   } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      await clearLocal(a.sessionId);
+      invalidateTraining();
+      router.dismissTo("/entrenar");
+      throw new SessionGone();
+    }
     if (!(err instanceof ApiError && err.code === "session_closed")) throw err;
     const out = await serverOutcome(a.sessionId);
     await clearLocal(a.sessionId);
@@ -288,6 +310,12 @@ export async function discardWorkout(sessionId: string, opts: { onlyInProgress?:
   try {
     await api(`/api/sessions/${sessionId}/discard`, { method: "POST", body: { onlyInProgress: !!opts.onlyInProgress } });
   } catch (err) {
+    // Si ya no existe en el servidor, descartarla es solo limpiar la copia local.
+    if (err instanceof ApiError && err.status === 404) {
+      await clearLocal(sessionId);
+      invalidateTraining();
+      return "discarded";
+    }
     if (opts.onlyInProgress && err instanceof ApiError && err.code === "session_closed") {
       const out = await serverOutcome(sessionId);
       await clearLocal(sessionId);

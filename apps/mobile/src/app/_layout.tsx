@@ -54,7 +54,7 @@ function Gate() {
   const toast = useToast();
   useSyncTriggers();
   useEffect(() => {
-    setSyncErrorListener((m) => toast(`No se guardó una serie: ${m}`, "error"));
+    setSyncErrorListener((m) => toast(m, "error"));
     return () => setSyncErrorListener(null);
   }, [toast]);
 
