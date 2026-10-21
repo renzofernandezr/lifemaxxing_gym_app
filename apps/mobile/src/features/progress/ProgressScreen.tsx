@@ -3,8 +3,8 @@ import { programPosition } from "@lifemaxxing/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Platform, RefreshControl, View } from "react-native";
-import { Panes } from "../../components/panes";
-import { Screen, ViewHead } from "../../components/ui";
+import { PanesScreen } from "../../components/panes";
+import { ViewHead } from "../../components/ui";
 import { isDemo } from "../../lib/demo";
 import { useTheme } from "../../theme/theme";
 import { BodyPane } from "./Body";
@@ -33,7 +33,8 @@ export function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const pos = programPosition(new Date(), start, tz);
   const eyebrow =
-    (pos.beforeStart ? `Empiezas el ${longDate(start)}` : pos.finished ? "Programa completo" : `Semana ${pos.week} de 24`) + (isDemo() ? " · simulación" : "");
+    (pos.beforeStart ? `Empiezas el ${longDate(start)}` : pos.finished ? "Programa completo" : `Semana ${pos.week} de 24`) +
+    (isDemo() ? " · simulación" : "");
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -61,13 +62,14 @@ export function ProgressScreen() {
   };
 
   return (
-    <Screen
-      refreshControl={
-        Platform.OS === "web" ? undefined : <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} colors={[c.accent]} />
-      }
-    >
-      <ViewHead eyebrow={eyebrow} title="Tu progreso" />
-      <Panes
+    <>
+      <PanesScreen
+        refreshControl={
+          Platform.OS === "web" ? undefined : (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} colors={[c.accent]} />
+          )
+        }
+        head={<ViewHead eyebrow={eyebrow} title="Tu progreso" />}
         tabs={TABS}
         label="Secciones de progreso"
         render={render}
@@ -84,6 +86,6 @@ export function ProgressScreen() {
         )}
       />
       <CheckinSheet open={sheet} onClose={() => setSheet(false)} />
-    </Screen>
+    </>
   );
 }

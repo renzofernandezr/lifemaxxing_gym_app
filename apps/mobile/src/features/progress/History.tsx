@@ -43,8 +43,7 @@ export function RoutineTag({ k, size = 30 }: { k: RoutineKey; size?: number }) {
   const isC = k === "C";
   return (
     <View
-      accessibilityElementsHidden
-      importantForAccessibility="no"
+      aria-hidden
       style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: isC ? c.bronzeSoft : c.accentSoft }}
     >
       <T style={{ fontFamily: F.bold, fontSize: 12, lineHeight: 15, color: isC ? c.bronze : c.accentInk }}>{k}</T>

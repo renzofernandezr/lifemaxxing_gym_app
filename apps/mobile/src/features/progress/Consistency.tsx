@@ -187,7 +187,7 @@ function HeatLegend() {
     </View>
   );
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 8, marginTop: 12 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 8, marginTop: 12 }} aria-hidden>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
         <T v="small" muted style={{ fontSize: 12, lineHeight: 16, marginRight: 2 }}>
           Pesas: menos

@@ -38,7 +38,7 @@ function DemoNotice() {
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start", backgroundColor: c.bronzeSoft, borderWidth: 1, borderStyle: "dashed", borderColor: c.bronze, borderRadius: R, paddingHorizontal: 14, paddingVertical: 12 }}>
-      <T style={{ color: c.bronze }} accessibilityElementsHidden importantForAccessibility="no">
+      <T style={{ color: c.bronze }} aria-hidden>
         ◐
       </T>
       <T v="small" style={{ flex: 1, fontSize: 14, lineHeight: 21 }}>

@@ -6,13 +6,11 @@ import { type ReactNode } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../lib/auth";
-import { isDemo } from "../lib/demo";
-import { useUpdateProfile } from "../lib/queries";
 import { useWorkout, useWorkoutHydrated } from "../store/workout";
 import { useTheme } from "../theme/theme";
 import { F, MAX_WIDTH } from "../theme/tokens";
 import { Brand } from "./brand";
-import { IconBarbell, IconMoon, IconPlan, IconProgress, IconSun, IconUser } from "./icons";
+import { IconBarbell, IconPlan, IconProgress, IconUser } from "./icons";
 import { IconButton, T, useLayout } from "./ui";
 
 export const TABS = [
@@ -20,26 +18,6 @@ export const TABS = [
   { name: "entrenar", label: "Entrenar", href: "/entrenar" },
   { name: "plan", label: "Plan", href: "/plan" },
 ] as const;
-
-/** Botón luna/sol: cambia el tema y lo guarda en el perfil. */
-export function ThemeButton() {
-  const { c, scheme, setPref } = useTheme();
-  const update = useUpdateProfile();
-  const dark = scheme === "dark";
-  const label = dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
-  return (
-    <IconButton
-      label={label}
-      onPress={() => {
-        const next = dark ? "light" : "dark";
-        setPref(next);
-        if (!isDemo()) update.mutate({ theme: next });
-      }}
-    >
-      {dark ? <IconSun color={c.onHdr} /> : <IconMoon color={c.onHdr} />}
-    </IconButton>
-  );
-}
 
 function HeaderTab({ isFocused, label, ref, ...props }: TabTriggerSlotProps & { label: string }) {
   const { c } = useTheme();
@@ -79,7 +57,6 @@ export function AppHeader() {
               ))}
             </View>
           ) : null}
-          <ThemeButton />
           <IconButton label="Ajustes y perfil" onPress={() => router.push("/ajustes")}>
             <IconUser color={c.onHdr} />
           </IconButton>

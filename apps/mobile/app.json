@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Lifemaxxing Gym",
+    "name": "Life Maxxing",
     "slug": "lifemaxxing-gym",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,8 +28,8 @@
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png",
-      "name": "Lifemaxxing Gym",
-      "shortName": "Lifemaxxing",
+      "name": "Life Maxxing",
+      "shortName": "Life Maxxing",
       "lang": "es-PE",
       "themeColor": "#FF6600",
       "backgroundColor": "#F5F5F5",

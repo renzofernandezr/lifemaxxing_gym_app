@@ -17,7 +17,7 @@ export function Plates({ total }: { total: number }) {
   const bar = { backgroundColor: c.bar };
   return (
     <View style={{ gap: 4 }}>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", height: 78, gap: 2, overflow: "hidden" }}>
+      <View aria-hidden style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", height: 78, gap: 2, overflow: "hidden" }}>
         <View style={[bar, { height: 8, width: 26, borderRadius: 2 }]} />
         {r.perSide.slice().reverse().map(plate)}
         <View style={[bar, { width: 6, height: 18, borderRadius: 2 }]} />

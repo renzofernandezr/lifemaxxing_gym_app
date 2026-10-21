@@ -23,9 +23,9 @@ import {
 } from "@lifemaxxing/core";
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
-import { Panes } from "../../components/panes";
+import { PanesScreen } from "../../components/panes";
 import { platesText } from "../../components/plates";
-import { Card, CardHead, Field, Grid, Pill, Seg, Screen, T, useLayout, ViewHead } from "../../components/ui";
+import { Card, CardHead, Field, Grid, Pill, Seg, T, useLayout, ViewHead } from "../../components/ui";
 import { useAuth } from "../../lib/auth";
 import { useRoutines } from "../../lib/queries";
 import { useTheme } from "../../theme/theme";
@@ -43,31 +43,34 @@ const TABS: { key: PaneKey; label: string }[] = [
 export function PlanScreen() {
   const { me } = useAuth();
   const p = me?.profile;
-  const eyebrow = [p?.heightCm ? `${fk(p.heightCm / 100)} m` : null, p?.startWeightKg ? `${fk(p.startWeightKg)} kg` : null, "intermedio", "fase de definición"]
+  const eyebrow = [
+    p?.heightCm ? `${fk(p.heightCm / 100)} m` : null,
+    p?.startWeightKg ? `${fk(p.startWeightKg)} kg` : null,
+    "intermedio",
+    "fase de definición",
+  ]
     .filter(Boolean)
     .join(" · ");
   return (
-    <Screen>
-      <ViewHead eyebrow={eyebrow} title="Tu plan" />
-      <Panes
-        tabs={TABS}
-        label="Secciones del plan"
-        render={(k) => {
-          switch (k) {
-            case "ruta":
-              return <Ruta />;
-            case "rutinas":
-              return <Rutinas />;
-            case "cargas":
-              return <Cargas />;
-            case "nutricion":
-              return <Nutricion />;
-            default:
-              return <Reglas />;
-          }
-        }}
-      />
-    </Screen>
+    <PanesScreen
+      head={<ViewHead eyebrow={eyebrow} title="Tu plan" />}
+      tabs={TABS}
+      label="Secciones del plan"
+      render={(k) => {
+        switch (k) {
+          case "ruta":
+            return <Ruta />;
+          case "rutinas":
+            return <Rutinas />;
+          case "cargas":
+            return <Cargas />;
+          case "nutricion":
+            return <Nutricion />;
+          default:
+            return <Reglas />;
+        }
+      }}
+    />
   );
 }
 
@@ -93,7 +96,15 @@ function Ruta() {
             return (
               <View
                 key={ph.id}
-                style={{ flex: isDesktop ? 1 : undefined, borderWidth: now ? 2 : 1, borderColor: now ? c.accent : c.line, borderRadius: R, padding: 14, backgroundColor: c.surface, gap: 4 }}
+                style={{
+                  flex: isDesktop ? 1 : undefined,
+                  borderWidth: now ? 2 : 1,
+                  borderColor: now ? c.accent : c.line,
+                  borderRadius: R,
+                  padding: 14,
+                  backgroundColor: c.surface,
+                  gap: 4,
+                }}
               >
                 <T style={{ fontFamily: F.extrabold, fontSize: 30, lineHeight: 32, color: now ? c.accentInk : c.muted }}>{ph.id}</T>
                 <T style={{ fontFamily: F.bold }}>
@@ -112,7 +123,8 @@ function Ruta() {
         <CardHead title="Semana tipo" right="A y B se alternan cada semana" />
         <WeekGrid />
         <T v="small" muted style={{ marginTop: 12, maxWidth: 640 }}>
-          Pesas en días no consecutivos. Martes, jueves y domingo: 40–60 min de caminata o actividad ligera (unos 8–10 mil pasos). El sábado es tu cuarto día: cardio moderado y abdominales.
+          Pesas en días no consecutivos. Martes, jueves y domingo: 40–60 min de caminata o actividad ligera (unos 8–10 mil pasos). El sábado
+          es tu cuarto día: cardio moderado y abdominales.
         </T>
       </Card>
     </>
@@ -247,14 +259,24 @@ function Rutinas() {
               </View>
               {table ? (
                 <>
-                  <T v="small" num style={{ flex: 1, fontFamily: F.medium }}>{setsText(ex)}</T>
-                  <T v="small" style={{ flex: 1 }}>{SCHEME_NAME[ex.scheme]}</T>
-                  <T v="small" num style={{ flex: 1, fontFamily: F.medium }}>{restText(ex)}</T>
+                  <T v="small" num style={{ flex: 1, fontFamily: F.medium }}>
+                    {setsText(ex)}
+                  </T>
+                  <T v="small" style={{ flex: 1 }}>
+                    {SCHEME_NAME[ex.scheme]}
+                  </T>
+                  <T v="small" num style={{ flex: 1, fontFamily: F.medium }}>
+                    {restText(ex)}
+                  </T>
                 </>
               ) : (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-                  <T style={{ fontFamily: F.bold }} num>{setsText(ex)}</T>
-                  <T v="small" muted>Descanso {restText(ex)}</T>
+                  <T style={{ fontFamily: F.bold }} num>
+                    {setsText(ex)}
+                  </T>
+                  <T v="small" muted>
+                    Descanso {restText(ex)}
+                  </T>
                   <Pill>{SCHEME_NAME[ex.scheme]}</Pill>
                 </View>
               )}
@@ -304,7 +326,16 @@ export function RirPicker({ value, onChange }: { value: number; onChange: (v: nu
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
               accessibilityLabel={`${v === 3 ? "3 o más" : v} reps en reserva`}
-              style={{ flex: 1, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: on ? c.accent : c.line, backgroundColor: on ? c.accent : c.surface2, alignItems: "center", justifyContent: "center" }}
+              style={{
+                flex: 1,
+                minHeight: 48,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: on ? c.accent : c.line,
+                backgroundColor: on ? c.accent : c.surface2,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <T style={{ fontFamily: F.bold, color: on ? c.onAccent : c.fg }}>{v === 3 ? "3+" : v}</T>
             </Pressable>
@@ -317,7 +348,7 @@ export function RirPicker({ value, onChange }: { value: number; onChange: (v: nu
 
 function Cargas() {
   const { c } = useTheme();
-  const { wide } = useLayout();
+  const { wide, width } = useLayout();
   const options = useMemo(calcOptions, []);
   const [id, setId] = useState("inc");
   const [w, setW] = useState("60");
@@ -336,7 +367,7 @@ function Cargas() {
   const rows = [
     ...warm.map(([p, rr], i) => {
       const x = round(res.loads[0] * p, stepOf(ex.exercise));
-      return { label: `Calentamiento ${i + 1}`, sub: null as string | null, reps: String(rr), pct: pct(x), load: x, strong: false };
+      return { label: `${width < 520 ? "Calent." : "Calentamiento"} ${i + 1}`, sub: null as string | null, reps: String(rr), pct: pct(x), load: x, strong: false };
     }),
     ...ex.sets.map((s, k) => ({
       label: `Serie ${k + 1}`,
@@ -352,7 +383,8 @@ function Cargas() {
     <Card>
       <CardHead title="Calculadora de cargas" right="1RM estimado · fórmula de Epley" />
       <View style={{ flexDirection: wide ? "row" : "column", gap: 16 }}>
-        <View style={{ flex: 1, gap: 12, minWidth: 0 }}>
+        {/* flex solo en dos columnas: apiladas, flex repartiría la altura y dejaría huecos. */}
+        <View style={{ flex: wide ? 1 : undefined, gap: 12, minWidth: 0 }}>
           <T style={{ fontFamily: F.semibold, fontSize: 13 }}>Ejercicio</T>
           <View style={{ gap: 8 }}>
             {options.map((o) => {
@@ -361,12 +393,23 @@ function Cargas() {
               const on = o.ex.exerciseId === id;
               return (
                 <View key={o.ex.exerciseId} style={{ gap: 6 }}>
-                  {head ? <T v="eyebrow" style={{ marginTop: 4 }}>{head}</T> : null}
+                  {head ? (
+                    <T v="eyebrow" style={{ marginTop: 4 }}>
+                      {head}
+                    </T>
+                  ) : null}
                   <Pressable
                     onPress={() => setId(o.ex.exerciseId)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: on }}
-                    style={{ borderWidth: 1.5, borderColor: on ? c.accent : c.line, backgroundColor: on ? c.accentSoft : c.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9 }}
+                    style={{
+                      borderWidth: 1.5,
+                      borderColor: on ? c.accent : c.line,
+                      backgroundColor: on ? c.accentSoft : c.surface,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                    }}
                   >
                     <T style={{ fontFamily: on ? F.semibold : F.regular, fontSize: 14 }}>{o.ex.exercise.name}</T>
                   </Pressable>
@@ -380,11 +423,26 @@ function Cargas() {
           </View>
           <RirPicker value={rir} onChange={setRir} />
           <T v="small" muted>
-            Usa una serie de 5–8 reps limpias, sin llegar al fallo. Entre 3 y 10 reps la estimación es más fiable. No hace falta probar un máximo real.
+            Usa una serie de 5–8 reps limpias, sin llegar al fallo. Entre 3 y 10 reps la estimación es más fiable. No hace falta probar un
+            máximo real.
           </T>
         </View>
-        <View style={{ flex: 1.3, gap: 12, minWidth: 0 }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, padding: 14, borderWidth: 1, borderStyle: "dashed", borderColor: c.accent, borderRadius: 8, backgroundColor: c.accentSoft }}>
+        <View style={{ flex: wide ? 1.3 : undefined, gap: 12, minWidth: 0 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              padding: 14,
+              borderWidth: 1,
+              borderStyle: "dashed",
+              borderColor: c.accent,
+              borderRadius: 8,
+              backgroundColor: c.accentSoft,
+            }}
+          >
             <View>
               <T v="eyebrow">1RM estimado</T>
               <T style={{ fontFamily: F.extrabold, fontSize: 30, lineHeight: 34 }} num>
@@ -404,16 +462,38 @@ function Cargas() {
               ))}
             </View>
             {rows.map((x, i) => (
-              <View key={i} style={{ flexDirection: "row", paddingVertical: 10, borderBottomWidth: i === rows.length - 1 ? 0 : 1, borderBottomColor: c.line }}>
+              <View
+                key={i}
+                style={{
+                  flexDirection: "row",
+                  paddingVertical: 10,
+                  borderBottomWidth: i === rows.length - 1 ? 0 : 1,
+                  borderBottomColor: c.line,
+                }}
+              >
                 <View style={{ flex: 1.4 }}>
                   <T style={{ fontFamily: x.strong ? F.bold : F.regular, fontSize: 14 }}>{x.label}</T>
-                  {x.sub ? <T v="small" muted>{x.sub}</T> : null}
+                  {x.sub ? (
+                    <T v="small" muted>
+                      {x.sub}
+                    </T>
+                  ) : null}
                 </View>
-                <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>{x.reps}</T>
-                <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>{x.pct}</T>
+                <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>
+                  {x.reps}
+                </T>
+                <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>
+                  {x.pct}
+                </T>
                 <View style={{ flex: 1.5 }}>
-                  <T num style={{ fontFamily: x.strong ? F.bold : F.medium, fontSize: 14 }}>{fk(x.load)} kg</T>
-                  {barra ? <T v="small" muted>{platesText(x.load)}</T> : null}
+                  <T num style={{ fontFamily: x.strong ? F.bold : F.medium, fontSize: 14 }}>
+                    {fk(x.load)} kg
+                  </T>
+                  {barra ? (
+                    <T v="small" muted>
+                      {platesText(x.load)}
+                    </T>
+                  ) : null}
                 </View>
               </View>
             ))}
@@ -423,9 +503,18 @@ function Cargas() {
             {kino
               ? "En Kino rep subes de peso en cada serie: la última apunta al tope del rango con 1 rep en reserva y las anteriores son la rampa. No necesita calentamiento aparte."
               : `La serie pesada apunta al tope de su rango dejando 1 rep en reserva; las demás bajan ${ex.dropKg ? `${fk(ex.dropKg)} kg por mano` : "10 %"}, como indica el curso.`}
-            {!res.reliable ? <T v="small" color={c.bad}> Con menos de 3 o más de 10 reps la estimación pierde precisión.</T> : null}
+            {!res.reliable ? (
+              <T v="small" color={c.bad}>
+                {" "}
+                Con menos de 3 o más de 10 reps la estimación pierde precisión.
+              </T>
+            ) : null}
           </T>
-          {e > 0 && reps > 0 ? null : <T v="small" color={c.bad}>Escribe un peso y las reps que hiciste.</T>}
+          {e > 0 && reps > 0 ? null : (
+            <T v="small" color={c.bad}>
+              Escribe un peso y las reps que hiciste.
+            </T>
+          )}
         </View>
       </View>
     </Card>
@@ -433,7 +522,7 @@ function Cargas() {
 }
 
 // ── Nutrición ───────────────────────────────────────────
-function MacroCard({ title, kcal, days }: { title: string; kcal: number; days: string }) {
+function MacroCard({ title, kcal, days, grow }: { title: string; kcal: number; days: string; grow: boolean }) {
   const { c } = useTheme();
   const m = macros(kcal, NUTRITION.proteinG, NUTRITION.fatPct);
   const items: [string, number, string][] = [
@@ -442,13 +531,13 @@ function MacroCard({ title, kcal, days }: { title: string; kcal: number; days: s
     ["Carbos", m.carbsG, c.plates["20"]],
   ];
   return (
-    <Card style={{ gap: 10, flex: 1 }}>
+    <Card style={{ gap: 10, flex: grow ? 1 : undefined }}>
       <CardHead title={title} right={days} />
       <T style={{ fontFamily: F.extrabold, fontSize: 44, lineHeight: 46 }} num>
         {thousands(kcal)}
         <T style={{ fontSize: 18, color: c.muted, fontFamily: F.bold }}> kcal</T>
       </T>
-      <View style={{ flexDirection: "row", height: 12, borderRadius: 6, overflow: "hidden" }} accessibilityElementsHidden>
+      <View style={{ flexDirection: "row", height: 12, borderRadius: 6, overflow: "hidden" }} aria-hidden>
         <View style={{ width: `${m.pct.protein}%`, backgroundColor: c.accent }} />
         <View style={{ width: `${m.pct.fat}%`, backgroundColor: c.bronze }} />
         <View style={{ width: `${m.pct.carbs}%`, backgroundColor: c.plates["20"] }} />
@@ -458,7 +547,9 @@ function MacroCard({ title, kcal, days }: { title: string; kcal: number; days: s
           <View key={name} style={{ flex: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: col }} />
-              <T v="small" muted>{name}</T>
+              <T v="small" muted>
+                {name}
+              </T>
             </View>
             <T style={{ fontFamily: F.bold, fontSize: 22, lineHeight: 26 }} num>
               {g} g
@@ -484,17 +575,29 @@ function Rule({ title, text }: { title: string; text: string }) {
 function Nutricion() {
   const { isDesktop, wide } = useLayout();
   const rules: [string, string][] = [
-    ["De dónde salen los números", "El curso estima el mantenimiento en 15 kcal por libra de peso: 232 lb × 15 ≈ 3,490 kcal. El Greek God no trae un protocolo de corte, así que se aplica su idea de ciclar calorías (más en días de pesas) con déficit: unas 5,000 kcal menos por semana, alrededor de −0.6 kg semanales."],
-    ["Calibración", "Mira el promedio de 2 semanas. Si bajas menos de 0.4 kg por semana, quita 10 % a ambos días. Si bajas más de 1 kg por semana o la fuerza cae, súmale 10 %."],
-    ["Proteína primero", "195 g diarios (1 g por libra de un peso meta de ~88 kg). Te ayuda a conservar músculo y a llegar con menos hambre. Tu proteína isolada cubre lo que falte."],
-    ["Horario", "Opcional: ayuno de 16 h con café y agua, comidas grandes después de entrenar y en la noche. Si entrenas en ayunas, 10 g de BCAA antes. Fin de semana fuera: elige platos con proteína a la plancha y controla la porción de carbos."],
+    [
+      "De dónde salen los números",
+      "El curso estima el mantenimiento en 15 kcal por libra de peso: 232 lb × 15 ≈ 3,490 kcal. El Greek God no trae un protocolo de corte, así que se aplica su idea de ciclar calorías (más en días de pesas) con déficit: unas 5,000 kcal menos por semana, alrededor de −0.6 kg semanales.",
+    ],
+    [
+      "Calibración",
+      "Mira el promedio de 2 semanas. Si bajas menos de 0.4 kg por semana, quita 10 % a ambos días. Si bajas más de 1 kg por semana o la fuerza cae, súmale 10 %.",
+    ],
+    [
+      "Proteína primero",
+      "195 g diarios (1 g por libra de un peso meta de ~88 kg). Te ayuda a conservar músculo y a llegar con menos hambre. Tu proteína isolada cubre lo que falte.",
+    ],
+    [
+      "Horario",
+      "Opcional: ayuno de 16 h con café y agua, comidas grandes después de entrenar y en la noche. Si entrenas en ayunas, 10 g de BCAA antes. Fin de semana fuera: elige platos con proteína a la plancha y controla la porción de carbos.",
+    ],
   ];
   return (
     <View style={{ gap: 16 }}>
       <CardHead h="h2" title="Nutrición para bajar grasa" right="estimado inicial · calibrar en 2 semanas" />
       <View style={{ flexDirection: wide ? "row" : "column", gap: 16 }}>
-        <MacroCard title="Día de pesas" kcal={NUTRITION.liftDayKcal} days="lun · mié · vie" />
-        <MacroCard title="Día sin pesas" kcal={NUTRITION.restDayKcal} days="mar · jue · sáb · dom" />
+        <MacroCard title="Día de pesas" kcal={NUTRITION.liftDayKcal} days="lun · mié · vie" grow={wide} />
+        <MacroCard title="Día sin pesas" kcal={NUTRITION.restDayKcal} days="mar · jue · sáb · dom" grow={wide} />
       </View>
       <Card>
         <Grid cols={isDesktop ? 2 : 1} gap={14}>
@@ -510,12 +613,30 @@ function Nutricion() {
 function Reglas() {
   const { isDesktop } = useLayout();
   const rules: [string, string][] = [
-    ["Doble progresión", "Trabajas dentro de un rango. Cuando llegas al tope en una serie, la próxima sesión subes 2.5 kg en barra (2 kg en mancuernas) y vuelves a la parte baja del rango. Meta: +4 a +7 kg al mes en los básicos."],
-    ["La serie pesada primero", "En pirámide inversa la serie 1 va a una rep del fallo. Luego bajas ~10 % y buscas 1–2 reps más. Ninguna otra serie se lleva al fallo."],
-    ["Descansos completos", "3 min entre series de básicos, 4–5 min después del press inclinado, 2 min en accesorios y piernas, 10–15 s entre mini-series de rest-pause. La app te los cuenta."],
-    ["Del jalón a las dominadas", "Hoy no haces dominadas, así que el curso indica jalón supino hasta poder. Las negativas son un añadido para llegar antes. Con 5 dominadas limpias haces 3 series a peso corporal; con 8, empiezas a lastrar (4, 6 y 8 reps, +1.25 kg por sesión)."],
-    ["Mesetas", "Si un básico no sube en 2–3 sesiones seguidas, no cambies todo: rota a una variante del mismo patrón (inclinado con barra → con mancuernas) y vuelve a subir."],
-    ["Registra todo", "Cada serie que no anotas es progreso que no puedes medir. La fuerza que sube mientras el peso baja es la señal de que conservas el músculo."],
+    [
+      "Doble progresión",
+      "Trabajas dentro de un rango. Cuando llegas al tope en una serie, la próxima sesión subes 2.5 kg en barra (2 kg en mancuernas) y vuelves a la parte baja del rango. Meta: +4 a +7 kg al mes en los básicos.",
+    ],
+    [
+      "La serie pesada primero",
+      "En pirámide inversa la serie 1 va a una rep del fallo. Luego bajas ~10 % y buscas 1–2 reps más. Ninguna otra serie se lleva al fallo.",
+    ],
+    [
+      "Descansos completos",
+      "3 min entre series de básicos, 4–5 min después del press inclinado, 2 min en accesorios y piernas, 10–15 s entre mini-series de rest-pause. La app te los cuenta.",
+    ],
+    [
+      "Del jalón a las dominadas",
+      "Hoy no haces dominadas, así que el curso indica jalón supino hasta poder. Las negativas son un añadido para llegar antes. Con 5 dominadas limpias haces 3 series a peso corporal; con 8, empiezas a lastrar (4, 6 y 8 reps, +1.25 kg por sesión).",
+    ],
+    [
+      "Mesetas",
+      "Si un básico no sube en 2–3 sesiones seguidas, no cambies todo: rota a una variante del mismo patrón (inclinado con barra → con mancuernas) y vuelve a subir.",
+    ],
+    [
+      "Registra todo",
+      "Cada serie que no anotas es progreso que no puedes medir. La fuerza que sube mientras el peso baja es la señal de que conservas el músculo.",
+    ],
   ];
   return (
     <Card>

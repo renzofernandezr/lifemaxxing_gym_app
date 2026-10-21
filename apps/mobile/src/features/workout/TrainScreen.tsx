@@ -162,7 +162,7 @@ function Preview({ t, activeLocal }: { t: TodayResponse; activeLocal: string | n
                 Una serie de prueba en cada básico calcula el peso de todas tus series.
               </T>
             </View>
-            <Switch value={calibrate} onValueChange={setCalibrate} trackColor={{ true: c.accent, false: c.line }} thumbColor="#fff" accessibilityElementsHidden />
+            <Switch value={calibrate} onValueChange={setCalibrate} trackColor={{ true: c.accent, false: c.line }} thumbColor="#fff" aria-hidden />
           </Pressable>
         ) : null}
 

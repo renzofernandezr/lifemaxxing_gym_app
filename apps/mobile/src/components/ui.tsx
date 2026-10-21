@@ -21,6 +21,7 @@ import {
   type ViewProps,
   type ViewStyle,
 } from "react-native";
+import { useRestBarSpace } from "../store/workout";
 import { useTheme } from "../theme/theme";
 import { DESKTOP, F, MAX_WIDTH, R } from "../theme/tokens";
 import { IconMinus, IconPlus } from "./icons";
@@ -106,11 +107,13 @@ export function Screen({
 }) {
   const { c } = useTheme();
   const { isDesktop } = useLayout();
+  const restSpace = useRestBarSpace();
   const inner = (
     <View
       style={[
         { width: "100%", maxWidth: MAX_WIDTH, alignSelf: "center", paddingHorizontal: 16, paddingTop: isDesktop ? 30 : 22, gap: isDesktop ? 22 : 18 },
-        { paddingBottom: bottomPad ?? (isDesktop ? 60 : 120) },
+        // Margen normal al final; solo se agranda si la barra de descanso minimizada tapa el contenido.
+        { paddingBottom: (bottomPad ?? (isDesktop ? 60 : 24)) + restSpace },
         contentStyle,
       ]}
     >

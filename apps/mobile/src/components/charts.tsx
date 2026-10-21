@@ -155,7 +155,7 @@ export function LegendSwatch({ kind }: { kind: "line" | "ref" | "goal" }) {
   const { c } = useTheme();
   const stroke = kind === "line" ? c.accent : kind === "ref" ? c.bronze : c.good;
   return (
-    <Svg width={18} height={6} accessibilityElementsHidden importantForAccessibility="no">
+    <Svg width={18} height={6} aria-hidden>
       <Line
         x1={0}
         x2={18}
