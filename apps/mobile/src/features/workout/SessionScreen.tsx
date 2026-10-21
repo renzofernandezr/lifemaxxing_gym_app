@@ -205,7 +205,7 @@ function Live({ a }: { a: ActiveWorkout }) {
               await discardWorkout(a.sessionId);
               setConfirmEnd(false);
               toast("Sesión descartada", "info");
-              router.replace("/entrenar");
+              router.dismissTo("/entrenar");
             } catch (err) {
               setFinishError((err as Error).message);
             }

@@ -37,14 +37,14 @@ export function SummaryScreen() {
 
   const save = () => {
     useWorkout.getState().setSummary(null);
-    router.replace("/progreso");
+    router.dismissTo("/progreso");
   };
   const discard = async () => {
     setBusy(true);
     try {
       await discardWorkout(s.sessionId);
       toast("Sesión descartada", "info");
-      router.replace("/entrenar");
+      router.dismissTo("/entrenar");
     } catch (err) {
       toast((err as Error).message, "error");
     } finally {
