@@ -1,6 +1,12 @@
 .DS_Store
 node_modules/
+dist/
+coverage/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
+# URLs públicas de la API (no son secretos)
+!apps/mobile/.env.development
+!apps/mobile/.env.production
 .secrets/

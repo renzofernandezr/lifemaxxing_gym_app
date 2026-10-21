@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm ≥ 11 lee la configuración desde aquí (no desde .npmrc). Expo con pnpm necesita node_modules plano.
+nodeLinker: hoisted
