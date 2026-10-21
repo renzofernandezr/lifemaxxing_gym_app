@@ -8,7 +8,7 @@
     "scheme": "lifemaxxing",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/icon-ios.png",
       "bundleIdentifier": "com.renzofernandez.lifemaxxinggym",
       "supportsTablet": false,
       "infoPlist": {
@@ -49,13 +49,27 @@
         }
       ],
       "expo-secure-store",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
       "expo-font",
       "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "22fdf9a2-a1c1-45a3-b7f2-aec14b9ba6ca"
+      }
+    },
+    "owner": "renzofernandezg"
   }
 }

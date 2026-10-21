@@ -60,6 +60,7 @@ import {
   type WorkoutSessionDTO,
   type WorkoutSetDTO,
 } from "@lifemaxxing/core";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ApiError } from "./api";
 import { demoMode, type DemoMode } from "./demo";
 
@@ -131,6 +132,7 @@ interface DemoSession {
 
 interface World {
   mode: DemoMode;
+  /** Día en que se creó el mundo de la demo (ancla del calendario; no cambia con los días). */
   today: string;
   user: UserDTO;
   profile: ProfileDTO;
@@ -138,17 +140,50 @@ interface World {
   checkins: CheckinDTO[];
   measurements: MeasurementDTO[];
   seq: number;
-  /** Entreno en curso (solo en memoria). */
+  /** Entreno en curso (se guarda en el dispositivo con el resto del mundo). */
   active: { dto: WorkoutSessionDTO; routine: RoutineDTO } | null;
 }
 
+// El mundo de la demo se guarda en el dispositivo: un entreno a medias sobrevive a cerrar la app y lo que
+// se registra se acumula con los días (la historia simulada queda en el pasado, anclada al día de creación).
+const STORE_KEY = "lmx-demo-world-v1";
 let world: World | null = null;
+let loading: Promise<World> | null = null;
 
-function getWorld(): World {
-  const today = localDate(new Date(), TZ);
+/** Fecha de hoy en Lima (la del día real, no la del ancla). */
+const nowDate = () => localDate(new Date(), TZ);
+
+async function getWorld(): Promise<World> {
   const m = demoMode() ?? "historial";
-  if (!world || world.today !== today || world.mode !== m) world = m === "nuevo" ? buildNew(today) : build(today);
+  if (world && world.mode === m) return world;
+  loading ??= (async () => {
+    let w: World | null = null;
+    try {
+      const raw = await AsyncStorage.getItem(STORE_KEY);
+      const saved = raw ? (JSON.parse(raw) as World) : null;
+      if (saved && saved.mode === m) w = saved;
+    } catch {
+      w = null;
+    }
+    if (!w) {
+      const today = nowDate();
+      w = m === "nuevo" ? buildNew(today) : build(today);
+      await saveWorld(w);
+    }
+    return w;
+  })().finally(() => {
+    loading = null;
+  });
+  world = await loading;
   return world;
+}
+
+async function saveWorld(w: World) {
+  try {
+    await AsyncStorage.setItem(STORE_KEY, JSON.stringify(w));
+  } catch {
+    // sin almacenamiento: la demo sigue en memoria
+  }
 }
 
 const routineCache = new Map<number, RoutineDTO[]>();
@@ -453,7 +488,7 @@ function lifts(w: World): LiftsResponse {
 
 function activity(w: World, qs: URLSearchParams): ActivityResponse {
   const weeks = Math.max(1, Math.min(104, Number(qs.get("weeks") ?? 26) || 26));
-  const to = w.today;
+  const to = nowDate();
   const from = addDays(mondayOf(to), -(weeks - 1) * 7);
   return {
     from,
@@ -507,7 +542,7 @@ function suggestionFor(w: World, ex: ResolvedExercise, synthesize: boolean): Loa
   if (!lastSets && synthesize && w.mode === "historial" && BASE[ex.exerciseId]) {
     // Sin historial en la demo (p. ej. la rutina B de la fase 2): una "última vez" plausible hace una semana.
     lastSets = setsFor(ex, 1);
-    lastDate = `${addDays(w.today, -7)}T12:00:00.000Z`;
+    lastDate = `${addDays(nowDate(), -7)}T12:00:00.000Z`;
     best = bestOf(lastSets.filter((x) => x.weightKg > 0), false);
   }
   const bestE = best ? clean(e1rm(best.weightKg, best.reps)) : null;
@@ -550,7 +585,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 function today(w: World, qs: URLSearchParams): TodayResponse {
   const q = qs.get("date");
   if (q && !ISO.test(q)) throw new ApiError(400, "bad_request", "Fecha inválida (AAAA-MM-DD)");
-  const date = q ?? w.today;
+  const date = q ?? nowDate();
   const start = w.profile.programStartDate;
   const position = programPosition(date, start, w.profile.timezone);
   const next = nextSession(date, start);
@@ -577,7 +612,7 @@ function today(w: World, qs: URLSearchParams): TodayResponse {
 
 function routines(w: World, qs: URLSearchParams): RoutinesResponse {
   const q = qs.get("phase");
-  const phaseId = q ? Number(q) : programPosition(w.today, w.profile.programStartDate, w.profile.timezone).phase.id;
+  const phaseId = q ? Number(q) : programPosition(nowDate(), w.profile.programStartDate, w.profile.timezone).phase.id;
   const phase = PHASES.find((p) => p.id === phaseId);
   if (!phase) throw new ApiError(400, "bad_request", "Fase inválida (1, 2 o 3)");
   return { phase: phase.id, templatePhase: phase.templatePhase, routines: routinesFor(phase.templatePhase) };
@@ -640,7 +675,7 @@ function startSession(w: World, body: unknown): WorkoutSessionDTO {
   const routine = allRoutines().find((r) => r.id === input.routineId);
   if (!routine) throw notFound("Rutina");
   if (w.active) throw new ApiError(409, "session_active", "Ya tienes un entrenamiento en curso", { activeSessionId: w.active.dto.id });
-  const pos = programPosition(input.date ?? w.today, w.profile.programStartDate, w.profile.timezone);
+  const pos = programPosition(input.date ?? nowDate(), w.profile.programStartDate, w.profile.timezone);
   const dto: WorkoutSessionDTO = {
     id: uuid(6, ++w.seq),
     routineId: routine.id,
@@ -786,7 +821,7 @@ function finishSession(w: World, a: NonNullable<World["active"]>): SessionSummar
     exercises,
   };
   const dto: WorkoutSessionDTO = { ...a.dto, status: "finished", finishedAt: summary.finishedAt };
-  w.sessions = [...w.sessions, { date: w.today, dto, summary }];
+  w.sessions = [...w.sessions, { date: nowDate(), dto, summary }];
   w.active = null;
   return summary;
 }
@@ -800,9 +835,15 @@ function discardSession(w: World, id: string) {
 
 const notFound = (what: string) => new ApiError(404, "not_found", `${what} no encontrado`);
 
-/** Enrutador del modo demo: misma forma de respuesta que la API real. */
-export function handleDemo(method: string, path: string, body?: unknown): unknown {
-  const w = getWorld();
+/** Enrutador del modo demo: misma forma de respuesta que la API real. Guarda el mundo tras cada cambio. */
+export async function handleDemo(method: string, path: string, body?: unknown): Promise<unknown> {
+  const w = await getWorld();
+  const result = route(w, method, path, body);
+  if (method.toUpperCase() !== "GET") await saveWorld(w);
+  return result;
+}
+
+function route(w: World, method: string, path: string, body?: unknown): unknown {
   const [pathname, query = ""] = path.split("?");
   const qs = new URLSearchParams(query);
   const m = method.toUpperCase();
