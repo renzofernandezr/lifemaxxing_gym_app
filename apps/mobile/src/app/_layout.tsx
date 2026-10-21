@@ -11,7 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { RestController, RestOverlay } from "../components/rest";
+import { RestController } from "../components/rest";
 import { ToastProvider, useToast } from "../components/toast";
 import { Loading } from "../components/ui";
 import { AuthProvider, useAuth } from "../lib/auth";
@@ -80,12 +80,7 @@ function Gate() {
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
-      {signedIn ? (
-        <>
-          <RestController />
-          <RestOverlay />
-        </>
-      ) : null}
+      {signedIn ? <RestController /> : null}
     </>
   );
 }

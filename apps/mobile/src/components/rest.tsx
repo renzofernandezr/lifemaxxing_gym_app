@@ -1,6 +1,6 @@
 import { secondsText } from "@lifemaxxing/core";
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, View, useWindowDimensions } from "react-native";
+import { Animated, BackHandler, Easing, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { adjustRest, beep, restDone, setRestExpanded, skipRest } from "../lib/rest";
@@ -112,80 +112,165 @@ export function RestBar({ bottom = 0, inline = false }: { bottom?: number; inlin
 
 const RING_R = 100;
 const RING_C = 2 * Math.PI * RING_R;
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-/** Descanso a pantalla completa (por defecto): anillo grande y cuenta legible a distancia. */
-export function RestOverlay() {
+/** Web: avance del anillo por requestAnimationFrame (Animated sobre <circle> deja props inválidas en el DOM). */
+function WebArc({ endAt, total, stroke }: { endAt: number; total: number; stroke: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    let id = 0;
+    let last = 0;
+    const loop = (t: number) => {
+      if (t - last > 33) {
+        last = t;
+        setNow(Date.now());
+      }
+      id = requestAnimationFrame(loop);
+    };
+    id = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const frac = total > 0 ? Math.min(1, 1 - Math.max(0, endAt - now) / total) : 1;
+  return (
+    <Circle cx={110} cy={110} r={RING_R} stroke={stroke} strokeWidth={10} strokeLinecap="round" fill="none" strokeDasharray={`${RING_C}`} strokeDashoffset={RING_C * frac} />
+  );
+}
+
+/**
+ * Descanso a pantalla completa: capa que tapa toda la pantalla donde se monta (sesión o pestañas).
+ * No usa <Modal> porque en iOS quedaría detrás de la sesión, que es un modal nativo.
+ * El anillo se vacía de forma continua (Animated) y entra con un fundido + escala.
+ */
+export function RestScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const v = useRestView();
   const open = !!v?.rest.expanded;
-  // El anillo ocupa todo el ancho útil sin pasar de la mitad del alto.
   const ring = Math.max(200, Math.min(width - 40, height * 0.48, 520));
-  const digits = Math.round(ring * (v?.done ? 0.2 : 0.3));
+
+  // Progreso del anillo: 0 = lleno, 1 = vacío. Se anima linealmente hasta el final del descanso.
+  const progress = useRef(new Animated.Value(0)).current;
+  const enter = useRef(new Animated.Value(0)).current;
+  const endAt = v?.rest.endAt;
+  const total = v?.rest.total;
+
+  useEffect(() => {
+    if (!open || !endAt || !total || Platform.OS === "web") return;
+    const left = Math.max(0, endAt - Date.now());
+    progress.setValue(Math.min(1, 1 - left / total));
+    const anim = Animated.timing(progress, { toValue: 1, duration: left, easing: Easing.linear, useNativeDriver: false });
+    anim.start();
+    return () => anim.stop();
+  }, [open, endAt, total, progress]);
+
+  useEffect(() => {
+    if (!open) {
+      enter.setValue(0);
+      return;
+    }
+    Animated.timing(enter, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [open, enter]);
+
+  // Android: "atrás" minimiza el descanso en vez de salir de la sesión.
+  useEffect(() => {
+    if (!open || Platform.OS !== "android") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setRestExpanded(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [open]);
+
+  if (!v || !open) return null;
+  const done = v.done;
+  const digits = Math.round(ring * (done ? 0.2 : 0.3));
+  const dashoffset = progress.interpolate({ inputRange: [0, 1], outputRange: [0, RING_C] });
+
   return (
-    <Modal visible={open} animationType="fade" onRequestClose={() => setRestExpanded(false)} statusBarTranslucent>
-      {v ? (
-        <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16, paddingHorizontal: 20 }}>
-          <View accessibilityViewIsModal style={{ flex: 1, width: "100%", maxWidth: 560, alignSelf: "center" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
-              <Pressable onPress={() => setRestExpanded(false)} accessibilityRole="button" accessibilityLabel="Minimizar el descanso" hitSlop={12} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}>
-                <IconChevron dir="down" color={c.fg} size={22} />
-                <T style={{ fontFamily: F.semibold }}>Minimizar</T>
-              </Pressable>
-              <T v="eyebrow" numberOfLines={1} style={{ flexShrink: 1, textAlign: "right" }}>
-                {v.done ? "¡Vamos!" : v.rest.title}
-              </T>
-            </View>
+    <Animated.View
+      accessibilityViewIsModal
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          zIndex: 1000,
+          elevation: 1000,
+          backgroundColor: c.bg,
+          paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom + 16,
+          paddingHorizontal: 20,
+          opacity: enter,
+          transform: [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) }],
+        },
+      ]}
+    >
+      <View style={{ flex: 1, width: "100%", maxWidth: 560, alignSelf: "center" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
+          <Pressable
+            onPress={() => setRestExpanded(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Minimizar el descanso"
+            hitSlop={12}
+            style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}
+          >
+            <IconChevron dir="down" color={c.fg} size={22} />
+            <T style={{ fontFamily: F.semibold }}>Minimizar</T>
+          </Pressable>
+          <T v="eyebrow" numberOfLines={1} style={{ flexShrink: 1, textAlign: "right" }}>
+            {done ? "¡Vamos!" : v.rest.title}
+          </T>
+        </View>
 
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <View style={{ width: ring, height: ring, alignItems: "center", justifyContent: "center" }}>
-                <Svg viewBox="0 0 220 220" width={ring} height={ring} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
-                  <Circle cx={110} cy={110} r={RING_R} stroke={c.surface2} strokeWidth={10} fill="none" />
-                  <Circle
-                    cx={110}
-                    cy={110}
-                    r={RING_R}
-                    stroke={v.done ? c.good : c.accent}
-                    strokeWidth={10}
-                    strokeLinecap="round"
-                    fill="none"
-                    strokeDasharray={`${RING_C}`}
-                    strokeDashoffset={RING_C * Math.min(1, v.frac)}
-                  />
-                </Svg>
-                <T
-                  num
-                  accessibilityLiveRegion="none"
-                  accessibilityLabel={v.done ? "Terminó el descanso" : `${secondsText(v.left / 1000)} de descanso`}
-                  style={{ fontFamily: F.extrabold, fontSize: digits, lineHeight: Math.round(digits * 1.1), letterSpacing: -digits * 0.03, color: v.done ? c.good : c.fg }}
-                >
-                  {v.done ? "¡Vamos!" : secondsText(v.left / 1000)}
-                </T>
-              </View>
-            </View>
-
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <Button title="−15 s" onPress={() => adjustRest(-15)} style={{ flex: 1, minHeight: 56 }} />
-                <Button title="+30 s" onPress={() => adjustRest(30)} style={{ flex: 1, minHeight: 56 }} />
-              </View>
-              {v.rest.info ? (
-                <View style={{ backgroundColor: c.accentSoft, borderRadius: R, padding: 14 }}>
-                  <T style={{ fontFamily: F.semibold }}>{v.rest.info}</T>
-                </View>
-              ) : null}
-              {v.rest.next ? (
-                <View style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: R, padding: 14, gap: 4 }}>
-                  <T v="eyebrow">Siguiente</T>
-                  <T style={{ fontFamily: F.semibold, fontSize: 16 }}>{v.rest.next}</T>
-                </View>
-              ) : null}
-              <Button variant="primary" title={v.done ? "Empezar siguiente serie" : "Saltar descanso"} onPress={() => skipRest()} />
-            </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: ring, height: ring, alignItems: "center", justifyContent: "center" }}>
+            <Svg viewBox="0 0 220 220" width={ring} height={ring} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
+              <Circle cx={110} cy={110} r={RING_R} stroke={c.surface2} strokeWidth={10} fill="none" />
+              {Platform.OS === "web" ? (
+                <WebArc endAt={v.rest.endAt} total={v.rest.total} stroke={done ? c.good : c.accent} />
+              ) : (
+                <AnimatedCircle
+                  cx={110}
+                  cy={110}
+                  r={RING_R}
+                  stroke={done ? c.good : c.accent}
+                  strokeWidth={10}
+                  strokeLinecap="round"
+                  fill="none"
+                  strokeDasharray={`${RING_C}`}
+                  strokeDashoffset={done ? RING_C : (dashoffset as unknown as number)}
+                />
+              )}
+            </Svg>
+            <T
+              num
+              accessibilityLiveRegion="none"
+              accessibilityLabel={done ? "Terminó el descanso" : `${secondsText(v.left / 1000)} de descanso`}
+              style={{ fontFamily: F.extrabold, fontSize: digits, lineHeight: Math.round(digits * 1.1), letterSpacing: -digits * 0.03, color: done ? c.good : c.fg }}
+            >
+              {done ? "¡Vamos!" : secondsText(v.left / 1000)}
+            </T>
           </View>
         </View>
-      ) : null}
-    </Modal>
+
+        <View style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button title="−15 s" onPress={() => adjustRest(-15)} style={{ flex: 1, minHeight: 56 }} />
+            <Button title="+30 s" onPress={() => adjustRest(30)} style={{ flex: 1, minHeight: 56 }} />
+          </View>
+          {v.rest.info ? (
+            <View style={{ backgroundColor: c.accentSoft, borderRadius: R, padding: 14 }}>
+              <T style={{ fontFamily: F.semibold }}>{v.rest.info}</T>
+            </View>
+          ) : null}
+          {v.rest.next ? (
+            <View style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: R, padding: 14, gap: 4 }}>
+              <T v="eyebrow">Siguiente</T>
+              <T style={{ fontFamily: F.semibold, fontSize: 16 }}>{v.rest.next}</T>
+            </View>
+          ) : null}
+          <Button variant="primary" title={done ? "Empezar siguiente serie" : "Saltar descanso"} onPress={() => skipRest()} />
+        </View>
+      </View>
+    </Animated.View>
   );
 }

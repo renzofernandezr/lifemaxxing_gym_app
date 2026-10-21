@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconChevron } from "../../components/icons";
-import { RestBar } from "../../components/rest";
+import { RestBar, RestScreen } from "../../components/rest";
 import { Sheet } from "../../components/sheet";
 import { useToast } from "../../components/toast";
 import { Button, Loading, T } from "../../components/ui";
@@ -238,6 +238,8 @@ function Live({ a }: { a: ActiveWorkout }) {
           Descartar borra la sesión del historial y de tus estadísticas.
         </T>
       </Sheet>
+      {/* Al registrar una serie el descanso tapa toda la sesión. */}
+      <RestScreen />
     </View>
   );
 }
