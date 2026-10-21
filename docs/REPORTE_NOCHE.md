@@ -8,7 +8,7 @@ La app (iPhone + web), la API y la base de datos quedaron escritas, probadas sin
 
 | Hito | Estado | Qué quedó |
 |---|---|---|
-| M0 · Monorepo | ✅ | pnpm workspaces, Node 22 (fnm), Expo SDK 58 en `apps/mobile`. |
+| M0 · Monorepo | ✅ | pnpm workspaces, Node 22 (fnm), Expo en `apps/mobile` (SDK 57: ver la nota de Expo Go más abajo). |
 | M1 · `packages/core` | ✅ | Lógica del prototipo en TypeScript: Epley, cargas RPT/Kino, calibración, doble progresión, discos, calendario A/B/C con zona horaria de Lima, macros, check-in. **42 tests en verde**, incluidos todos los vectores del plan. |
 | M2 · Railway + migraciones | 🟡 bloqueado | Migraciones `0001_init`, `0002_seed_program` (generada desde `core`), `0003_session_summary`; runner con advisory lock y una transacción por archivo; `pnpm db:migrate`, `db:migrate:dev`, `db:new`. **Falta** crear el proyecto y las DB en Railway y migrar `dev` dos veces. |
 | M3 · API | 🟡 | Hono: registro limitado a `ALLOWED_EMAILS`, login con cookie httpOnly (web) o token Bearer (iPhone), sesiones con hash sha256 y expiración deslizante, límite de 5 intentos, CSRF por `Origin`, y todos los endpoints de §7.2. Tests de integración escritos (auth, rate limit, sesión expirada, entreno completo, idempotencia, check-ins, aislamiento entre usuarios). Typecheck limpio y bundle probado. **Los tests contra Postgres no se han corrido nunca** (no hay DB). |
@@ -80,7 +80,7 @@ El modo demo simula 8 semanas de datos y permite hacer un entreno completo en me
 
 **iPhone con Expo Go:**
 
-1. Instala Expo Go (compatible con SDK 58).
+1. Instala Expo Go de la App Store (hoy soporta SDK 57, la versión del proyecto). Sin API todavía, arranca Metro en modo demo: `pnpm --filter mobile demo`.
 2. Pon la URL de la API en `apps/mobile/.env.development`: el dominio de `dev`, o `http://<IP-de-tu-Mac>:3000` si corres `pnpm dev` (la API escucha en `0.0.0.0`).
 3. `cd apps/mobile && npx expo start` y escanea el QR con la cámara.
 

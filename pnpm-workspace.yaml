@@ -8,3 +8,18 @@ nodeLinker: hoisted
 # Dependencias a las que se permite correr scripts de instalación (pnpm ≥ 10 los bloquea por defecto).
 allowBuilds:
   esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@expo/cli@57.0.32'
+  - '@expo/config-plugins@57.0.11'
+  - '@expo/router-server@57.0.14'
+  - expo-modules-core@57.0.24
+  - expo-modules-jsi@57.1.3
+  - expo@57.0.31
+  - '@expo/ui@57.0.26'
+  - expo-router@57.0.29
+
+# Peer opcional de @react-native/community-cli-plugin: pnpm instalaría la última (0.88) y no la de nuestro RN.
+# Mantener igual a la versión de react-native de apps/mobile (subirla junto con el SDK de Expo).
+overrides:
+  "@react-native/metro-config": "0.86.3"

@@ -6,7 +6,7 @@ Entorno: `eval "$(fnm env)"; fnm use 22` antes de `pnpm` (la Mac tiene Node 26 p
 
 | Hito | Estado | Notas |
 |---|---|---|
-| M0 · Monorepo | ✅ | pnpm workspaces, Expo SDK 58 en `apps/mobile`, rama `feat/app-rn`. |
+| M0 · Monorepo | ✅ | pnpm workspaces, Expo SDK 57 en `apps/mobile` (bajado desde 58 para usar el Expo Go de la App Store), rama `feat/app-rn`. |
 | M1 · `packages/core` | ✅ | Lógica + 42 tests (todos los vectores de §6). |
 | M2 · Railway + migraciones | 🟡 bloqueado | Migraciones, runner y seed hechos. Railway caído toda la noche: 3 intentos de `railway init` fallidos ("Deploys have been paused temporarily"). |
 | M3 · API | 🟡 | Código y tests de integración escritos; typecheck OK. Tests contra Postgres sin correr (sin DB). |
