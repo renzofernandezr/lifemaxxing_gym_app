@@ -77,7 +77,7 @@ async function doStartRest(seconds: number, title: string, next: string | null, 
   const prev = useWorkout.getState().rest;
   await cancel(prev?.notificationId);
   const endAt = Date.now() + seconds * 1000;
-  const rest: RestState = { endAt, total: seconds * 1000, title, next, info, notificationId: null, expanded: true };
+  const rest: RestState = { endAt, total: seconds * 1000, title, next, info, notificationId: null };
   useWorkout.getState().setRest(rest);
   const id = await schedule(endAt, next);
   const cur = useWorkout.getState().rest;
@@ -106,10 +106,6 @@ async function doSkipRest() {
   await cancel(r?.notificationId);
 }
 
-export function setRestExpanded(expanded: boolean) {
-  const r = useWorkout.getState().rest;
-  if (r) useWorkout.getState().setRest({ ...r, expanded });
-}
 
 // Las operaciones del descanso se ejecutan de una en una: dos toques rápidos en "+30 s" suman 60 s
 // y nunca queda una notificación programada huérfana.

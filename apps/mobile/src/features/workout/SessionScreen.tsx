@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconCheck, IconChevron } from "../../components/icons";
-import { RestBar, RestScreen, Spotlight } from "../../components/rest";
+import { RestInline, SlideIn, Spotlight } from "../../components/rest";
 import { Sheet } from "../../components/sheet";
 import { useToast } from "../../components/toast";
 import { Button, Loading, T } from "../../components/ui";
 import { ApiError } from "../../lib/api";
+import { skipRest } from "../../lib/rest";
 import { tap } from "../../lib/haptics";
 import { useWorkout, useWorkoutHydrated, type ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
@@ -80,6 +81,15 @@ function Live({ a }: { a: ActiveWorkout }) {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const queue = useWorkout((s) => s.queue.length);
+  // El descanso ocupa el lugar de la serie: es un paso más de la secuencia (serie → descanso → serie).
+  const rest = useWorkout((s) => s.rest);
+  const [restOver, setRestOver] = useState(false);
+  useEffect(() => {
+    setRestOver(false);
+    if (!rest) return;
+    const t = setTimeout(() => setRestOver(true), Math.max(0, rest.endAt - Date.now()));
+    return () => clearTimeout(t);
+  }, [rest]);
   const [sheet, setSheet] = useState<"exercises" | "technique" | null>(null);
 
   // Al cambiar de serie (o al elegir una para corregir), el panel toma sus valores.
@@ -201,7 +211,9 @@ function Live({ a }: { a: ActiveWorkout }) {
 
   const p = progress(a.items);
   const view = { ...a, i: idx };
-  const cta = editing !== null ? "Guardar" : it.kind === "test" ? "Calcular mis cargas" : "Hecho";
+  const resting = !!rest && editing === null;
+  const cta =
+    editing !== null ? "Guardar" : resting ? (restOver ? "Empezar siguiente serie" : "Saltar descanso") : it.kind === "test" ? "Calcular mis cargas" : "Hecho";
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -248,21 +260,28 @@ function Live({ a }: { a: ActiveWorkout }) {
 
       <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
         <View style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
-          <SetFocus a={view} it={it} editing={editing !== null} draft={draft} setDraft={setDraft} />
+          {resting ? (
+            <SlideIn key="rest">
+              <RestInline />
+            </SlideIn>
+          ) : (
+            <SlideIn key={editing !== null ? `edit-${it.key}` : it.key}>
+              <SetFocus a={view} it={it} editing={editing !== null} draft={draft} setDraft={setDraft} />
+            </SlideIn>
+          )}
         </View>
       </ScrollView>
 
       <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 12, paddingTop: 4 }}>
         <View style={{ width: "100%", maxWidth: 520, alignSelf: "center", gap: 14 }}>
-          <RestBar inline />
           <View style={{ flexDirection: "row", gap: 10 }}>
             {editing !== null ? <Button title="Cancelar" onPress={() => setSel(null)} style={{ flex: 1, minHeight: 64, borderRadius: 20 }} /> : null}
             <Button
               variant="primary"
               title={cta}
               loading={busy}
-              onPress={editing !== null ? onSaveEdit : onLog}
-              icon={editing === null && it.kind !== "test" ? <IconCheck color={c.onAccent} size={24} /> : undefined}
+              onPress={editing !== null ? onSaveEdit : resting ? () => skipRest() : onLog}
+              icon={editing === null && !resting && it.kind !== "test" ? <IconCheck color={c.onAccent} size={24} /> : undefined}
               style={{
                 flex: 2,
                 minHeight: 64,
@@ -303,8 +322,6 @@ function Live({ a }: { a: ActiveWorkout }) {
           Descartar borra la sesión del historial y de tus estadísticas.
         </T>
       </Sheet>
-      {/* Al registrar una serie el descanso tapa toda la sesión. */}
-      <RestScreen />
     </View>
   );
 }

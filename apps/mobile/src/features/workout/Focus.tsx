@@ -178,8 +178,12 @@ export function SetFocus({ a, it, editing, draft, setDraft }: { a: ActiveWorkout
   return (
     <View style={{ gap: 14 }}>
       <View style={{ alignItems: "center", gap: 6 }}>
-        <T v="eyebrow" center numberOfLines={1}>
-          {[it.kind === "warmup" ? "Calentamiento" : SCHEME_NAME[ex.scheme], EQUIPMENT_NAME[eq]].join(" · ")}
+        <T
+          center
+          numberOfLines={1}
+          style={{ fontFamily: F.bold, fontSize: 14, lineHeight: 18, letterSpacing: 1.1, textTransform: "uppercase", color: it.kind === "warmup" ? c.bronze : c.accentInk }}
+        >
+          {[it.kind === "warmup" ? "Calentamiento" : it.kind === "test" ? "Serie de prueba" : SCHEME_NAME[ex.scheme], EQUIPMENT_NAME[eq]].join(" · ")}
         </T>
         <T center numberOfLines={2} accessibilityRole="header" style={{ fontFamily: F.extrabold, fontSize: 28, lineHeight: 32, letterSpacing: -0.6 }}>
           {ex.exercise.name}

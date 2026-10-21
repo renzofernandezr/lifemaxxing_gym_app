@@ -1,6 +1,6 @@
 // Datos simulados del modo demo (solo web con ?demo=1). Responden con la misma forma que la API real.
-// Son deterministas: todo se calcula a partir de la fecha de hoy en Lima, con el inicio del programa 8 semanas atrás
-// (la demo siempre está en la semana 9). Los check-ins, medidas y entrenos que se registren viven solo en memoria.
+// Son deterministas: todo se calcula a partir de la fecha de hoy en Lima, con el inicio del programa 7 semanas atrás
+// (la demo siempre está en la semana 8, la última de la Fase 1). Los check-ins, medidas y entrenos que se registren viven solo en memoria.
 import {
   addDays,
   bodyComp,
@@ -217,7 +217,8 @@ function bestOf(sets: DoneSet[], timed: boolean): DoneSet | null {
 }
 
 function build(today: string): World {
-  const start = addDays(mondayOf(today), -56);
+  // Hoy cae en la semana 8: la última de la Fase 1 (énfasis hombros), con 7 semanas de historial.
+  const start = addDays(mondayOf(today), -49);
   const profile: ProfileDTO = { heightCm: 186, startWeightKg: 105.6, goalWeightKg: 88, programStartDate: start, timezone: TZ, theme: "system" };
   const user: UserDTO = { id: uuid(9, 1), email: "demo@lifemaxxing.app", name: "Renzo", createdAt: `${addDays(start, -1)}T15:00:00.000Z` };
 
@@ -340,7 +341,7 @@ function build(today: string): World {
     { id: uuid(5, 1), measuredOn: start, chestCm: 112, armCm: 38.5, waistCm: 104 },
     { id: uuid(5, 2), measuredOn: addDays(start, 28), chestCm: 111.2, armCm: 38.6, waistCm: 101.5 },
     { id: uuid(5, 3), measuredOn: addDays(start, 56), chestCm: 110.5, armCm: 38.8, waistCm: 99 },
-  ];
+  ].filter((x) => x.measuredOn <= today);
 
   return { today, user, profile, sessions, checkins, measurements, seq: 100, active: null };
 }

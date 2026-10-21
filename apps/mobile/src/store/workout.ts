@@ -30,7 +30,6 @@ export interface RestState {
   /** Texto extra (p. ej. 1RM estimado tras la serie de prueba). */
   info: string | null;
   notificationId: string | null;
-  expanded: boolean;
 }
 
 export type PendingOp =
@@ -90,7 +89,7 @@ export const useWorkout = create<WorkoutState>()(
 
 /** Espacio extra al final de las pantallas cuando la barra de descanso minimizada flota sobre el contenido. */
 export function useRestBarSpace(): number {
-  return useWorkout((s) => (s.rest && !s.rest.expanded ? 104 : 0));
+  return useWorkout((s) => (s.rest ? 104 : 0));
 }
 
 /** ¿Ya se cargó el estado persistido? (para no mostrar "Entrenar" un instante antes de "Reanudar"). */
