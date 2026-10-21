@@ -4,3 +4,7 @@ packages:
 
 # pnpm ≥ 11 lee la configuración desde aquí (no desde .npmrc). Expo con pnpm necesita node_modules plano.
 nodeLinker: hoisted
+
+# Dependencias a las que se permite correr scripts de instalación (pnpm ≥ 10 los bloquea por defecto).
+allowBuilds:
+  esbuild: true
