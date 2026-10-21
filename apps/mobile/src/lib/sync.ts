@@ -24,35 +24,38 @@ async function send(op: PendingOp) {
 
 /** Envía la cola en orden. Devuelve true si quedó vacía. */
 export function flushQueue(): Promise<boolean> {
-  if (running) return running;
-  running = (async () => {
-    try {
-      for (;;) {
-        const op = useWorkout.getState().queue[0];
-        if (!op) {
-          backoff = 2000;
-          return true;
-        }
-        try {
-          await send(op);
-          useWorkout.getState().dropOps([op.id]);
-        } catch (err) {
-          const e = err instanceof ApiError ? err : new ApiError(0, "network", "Sin conexión");
-          if (e.isNetwork || e.status >= 500 || e.status === 429) {
-            scheduleRetry();
-            return false;
-          }
-          if (e.status === 401) return false; // el AuthProvider manda a login; la cola se conserva
-          // Error definitivo (sesión cerrada, datos inválidos…): se descarta para no bloquear la cola.
-          useWorkout.getState().dropOps([op.id]);
-          onDrop?.(e.message);
-        }
+  // Si ya hay una corrida, al terminar se encadena otra por si entraron series nuevas mientras tanto.
+  if (running) return running.then(() => (useWorkout.getState().queue.length ? flushQueue() : true));
+  // Ojo: si la cola está vacía la función async termina de inmediato; por eso `running` se limpia
+  // con .finally() después de asignarlo (un finally interno correría antes de la asignación).
+  const p = (async (): Promise<boolean> => {
+    for (;;) {
+      const op = useWorkout.getState().queue[0];
+      if (!op) {
+        backoff = 2000;
+        return true;
       }
-    } finally {
-      running = null;
+      try {
+        await send(op);
+        useWorkout.getState().dropOps([op.id]);
+      } catch (err) {
+        const e = err instanceof ApiError ? err : new ApiError(0, "network", "Sin conexión");
+        if (e.isNetwork || e.status >= 500 || e.status === 429) {
+          scheduleRetry();
+          return false;
+        }
+        if (e.status === 401) return false; // el AuthProvider manda a login; la cola se conserva
+        // Error definitivo (sesión cerrada, datos inválidos…): se descarta para no bloquear la cola.
+        useWorkout.getState().dropOps([op.id]);
+        onDrop?.(e.message);
+      }
     }
   })();
-  return running;
+  running = p;
+  p.finally(() => {
+    if (running === p) running = null;
+  }).catch(() => {});
+  return p;
 }
 
 function scheduleRetry() {
