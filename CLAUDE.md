@@ -6,6 +6,7 @@
 - Dominio (rutina, progresión, calibración, nutrición): `docs/rutina-fase1.md`.
 - Rama de trabajo: `feat/app-rn`. Commits pequeños, conventional commits en español, push al cerrar cada hito. Nunca `git push --force`.
 - Nunca commitees secretos. Solo `.env.example`. Las credenciales generadas van en `.secrets/` (ignorada por git).
+- Sin Docker ni Postgres local: las bases viven en Railway. Desarrollo y tests usan el entorno `dev` (tests en un schema temporal); `production` solo se toca vía deploy.
 - No toques proyectos de Railway distintos de `lifemaxxing-gym`.
 - UI en español (Perú), código en inglés, unidades en kg, zona horaria `America/Lima`.
 - Antes de cerrar un hito: `pnpm typecheck && pnpm test`.

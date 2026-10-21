@@ -3,6 +3,8 @@
 > Documento para que **Claude Code lo ejecute de forma autónoma durante la noche**.
 > Objetivo: convertir el prototipo `index.html` de este repo en una app real que funcione en **iPhone y web**, con **auth propia sobre Postgres**, **migraciones SQL**, API desplegada en un **proyecto nuevo de Railway** y datos persistentes.
 >
+> **Sin Docker ni base de datos local:** toda base de datos vive en Railway (entornos `dev` y `production`). La Mac solo corre Node, Expo y las CLIs.
+>
 > Fuente de verdad del dominio: `index.html` (prototipo con toda la lógica y el diseño) y `docs/rutina-fase1.md` (rutina, progresión, calibración, nutrición).
 
 ---
@@ -19,7 +21,6 @@ Sin esto el agente se bloquea a las 2 a. m. esperando un login.
    git --version && gh auth status        # git push debe funcionar sin pedir contraseña
    brew install railway && railway login  # sesión iniciada en el navegador
    railway whoami
-   docker info          # Docker Desktop abierto (Postgres local para desarrollo y tests)
    xcrun simctl list devices | head   # opcional: simulador de iOS (Xcode)
    ```
    Opcional, solo si quieres el build de iPhone hecho en la noche: `npx eas-cli login` (cuenta de Expo).
@@ -29,7 +30,7 @@ Sin esto el agente se bloquea a las 2 a. m. esperando un login.
    mkdir -p ~/Repos && cd ~/Repos
    claude --dangerously-skip-permissions
    ```
-   Corre sin pedir permisos, así que el agente puede ejecutar cualquier comando en tu usuario. Por eso las reglas de §1 le prohíben lo destructivo. Si prefieres más control, usa `claude --permission-mode acceptEdits` y agrega a tu allowlist `pnpm`, `npx`, `git`, `gh`, `railway`, `docker` y `psql`. El riesgo es que se detenga a pedir permiso para algún comando que no previste.
+   Corre sin pedir permisos, así que el agente puede ejecutar cualquier comando en tu usuario. Por eso las reglas de §1 le prohíben lo destructivo. Si prefieres más control, usa `claude --permission-mode acceptEdits` y agrega a tu allowlist `pnpm`, `npx`, `node`, `git`, `gh` y `railway`. El riesgo es que se detenga a pedir permiso para algún comando que no previste.
 
 > Ruta asumida: `~/Repos/lifemaxxing_gym_app` = `/Users/renzofernandez/Repos/lifemaxxing_gym_app`.
 
@@ -62,8 +63,7 @@ lifemaxxing_gym_app/
 ├─ apps/
 │  ├─ api/                    # Node + TypeScript (Hono), auth, endpoints, runner de migraciones; sirve también la web
 │  └─ mobile/                 # Expo (React Native + Expo Router) → iOS, Android y web
-├─ Dockerfile                 # build de producción: web export + API en una imagen
-├─ docker-compose.yml         # Postgres local para desarrollo/tests
+├─ Dockerfile                 # build de producción (lo construye Railway, no se necesita Docker en la Mac)
 ├─ pnpm-workspace.yaml
 ├─ .npmrc                     # node-linker=hoisted (requerido por Expo con pnpm)
 └─ .env.example
@@ -82,8 +82,8 @@ lifemaxxing_gym_app/
 | DB | **Postgres** en Railway, driver `pg` | Migraciones SQL puras |
 | Validación | **zod** compartido (en `packages/core`) | Mismos esquemas en app y API |
 | Hash de contraseñas | `@node-rs/argon2` (argon2id) | Binarios precompilados, sin compilar en Railway |
-| Tests | **vitest** (core y API), DB de test en Docker | Rápidos |
-| Deploy | Railway: servicio `app` (API + web estática) + plugin **Postgres** | Mismo origen para web, así la cookie de sesión es simple |
+| Tests | **vitest** (core y API); la API se prueba contra el Postgres del entorno `dev` de Railway, en un schema aislado por corrida | Sin Docker ni DB local |
+| Deploy | Railway, proyecto con entornos **`dev`** y **`production`**; cada uno con servicio `app` (API + web estática) y su propio **Postgres** | Mismo origen para web (cookie simple) y datos de prueba separados de los reales |
 
 **Mismo origen:** el servicio `app` sirve `/api/*` y la build web de Expo (`expo export -p web` → `apps/mobile/dist`) en `/`. Así la web usa cookie httpOnly sin CORS. El iPhone llama a la URL pública de Railway con token Bearer.
 
@@ -95,10 +95,10 @@ lifemaxxing_gym_app/
 |---|---|---|
 | M0 | Clonar y preparar monorepo | `pnpm install` OK, rama `feat/app-rn` creada, `docs/PROGRESO.md` iniciado |
 | M1 | `packages/core` con la lógica del prototipo + tests | Todos los vectores de §6 pasan |
-| M2 | Migraciones SQL + runner + seed del programa | `pnpm db:migrate` aplica sobre DB vacía (local) dos veces sin error (idempotente) |
-| M3 | API: auth + endpoints + tests de integración | Tests en verde contra Postgres de Docker |
-| M4 | Railway: proyecto nuevo, Postgres, servicio `app` desplegado | `GET https://<dominio>/api/health` → `{ ok: true, db: true }` |
-| M5 | App Expo: auth, navegación, tema, Plan | Login funciona en web local y en iOS (simulador o Expo Go) |
+| M2 | Railway (proyecto + entornos + Postgres) y migraciones SQL + runner + seed | `pnpm db:migrate` aplica sobre la DB de `dev` dos veces sin error (idempotente) |
+| M3 | API: auth + endpoints + tests de integración | Tests en verde contra la DB de `dev` (schema aislado por corrida) |
+| M4 | Servicio `app` desplegado en `dev` y en `production` | `GET https://<dominio>/api/health` → `{ ok: true, db: true }` en ambos entornos |
+| M5 | App Expo: auth, navegación, tema, Plan | Login funciona en web (Expo local apuntando a la API) y en iOS (simulador o Expo Go) |
 | M6 | App: modo Entrenar completo (calibración, series, descansos, resumen) | Se puede hacer un Workout A completo y queda guardado en la DB |
 | M7 | App: Progreso (check-in, gráficas, fuerza, constancia, historial) | Datos reales desde la API, estados vacíos diseñados |
 | M8 | Web en producción + smoke test + reporte | Web desplegada en Railway, `docs/REPORTE_NOCHE.md` escrito, PR abierto |
@@ -121,14 +121,15 @@ git checkout -b feat/app-rn
   - `dev`: API y Expo en paralelo
   - `test`: tests de todo el repo
   - `typecheck`
-  - `db:up`: Postgres local con docker compose
-  - `db:migrate`
+  - `db:migrate`: aplica migraciones a la DB indicada en `DATABASE_URL`
+  - `db:migrate:dev`: lo mismo contra `DEV_DATABASE_URL` (DB de Railway `dev`)
   - `build`
-- `docker-compose.yml`: `postgres:16` en el puerto `5433` (evita choques), usuario, contraseña y base `gym`, más una base `gym_test` para tests.
 - `.env.example`:
   ```
-  DATABASE_URL=postgres://gym:gym@localhost:5433/gym
-  TEST_DATABASE_URL=postgres://gym:gym@localhost:5433/gym_test
+  # URL PÚBLICA del Postgres del entorno dev de Railway (DATABASE_PUBLIC_URL). La pone el agente en .env, nunca en git.
+  DEV_DATABASE_URL=
+  # En Railway, DATABASE_URL la inyecta la variable de referencia ${{Postgres.DATABASE_URL}}
+  DATABASE_URL=
   PORT=3000
   NODE_ENV=development
   ALLOWED_EMAILS=renzofernandezg.rf@gmail.com
@@ -139,7 +140,22 @@ git checkout -b feat/app-rn
 
 ---
 
-## 5. M2 · Base de datos (migraciones SQL)
+## 5. M2 · Railway y base de datos (migraciones SQL)
+
+### 5.0 Crear el proyecto y las bases en Railway (primero)
+
+Las flags de la CLI cambian entre versiones: revisa `railway --help` y `railway <cmd> --help` antes de usarlas.
+
+1. Crea un **proyecto nuevo** `lifemaxxing-gym` (no reutilices proyectos existentes). Su entorno inicial es `production`.
+   ```bash
+   railway init --name lifemaxxing-gym
+   railway add --database postgres
+   ```
+2. Crea el entorno **`dev`** duplicando `production` para que tenga su **propio** Postgres (CLI: `railway environment new dev --duplicate production` o el equivalente que muestre `--help`). Si la CLI no permite duplicar, crea el entorno `dev` y agrégale otro Postgres con `railway add --database postgres` estando enlazado a `dev`.
+3. Obtén la **URL pública** del Postgres de `dev` (variable `DATABASE_PUBLIC_URL` del servicio Postgres; por ejemplo `railway variables --service Postgres --environment dev --kv`) y guárdala en `.env` como `DEV_DATABASE_URL`. La Mac se conecta por la URL pública porque la red privada de Railway no es accesible desde fuera.
+4. Comprueba la conexión con un `select 1` desde un script de Node (no hace falta tener `psql` instalado).
+5. **Nunca** apliques nada manualmente a la DB de `production`: ahí las migraciones solo corren en el deploy (§8).
+
 
 ### 5.1 Runner de migraciones
 
@@ -447,20 +463,15 @@ Porta las funciones del prototipo (`index.html`, bloque `<script>`) a TypeScript
 | `GET /api/stats/lifts` | series temporales de la serie pesada y el e1RM de `inc`, `ohp`, `jal` (y alternativas) |
 | `GET /api/stats/activity?weeks=26` | días entrenados con volumen (para el mapa de actividad) |
 
-Tests de integración con vitest contra `TEST_DATABASE_URL`: registro bloqueado si el email no está permitido, login con cookie y con Bearer, rate limit, sesión expirada, flujo completo de un entreno, idempotencia de sets, check-in duplicado por fecha (debe hacer upsert) y que un usuario no pueda leer datos de otro.
+Tests de integración con vitest contra `DEV_DATABASE_URL`, **cada corrida en un schema propio**: el setup crea `test_<timestamp>`, conecta con `options=-c search_path=test_<timestamp>,public`, corre las migraciones ahí y al final hace `drop schema ... cascade`. Así nunca se tocan los datos del entorno `dev`. Casos a cubrir: registro bloqueado si el email no está permitido, login con cookie y con Bearer, rate limit, sesión expirada, flujo completo de un entreno, idempotencia de sets, check-in duplicado por fecha (debe hacer upsert) y que un usuario no pueda leer datos de otro.
 
 ---
 
-## 8. M4 · Railway (proyecto nuevo)
+## 8. M4 · Despliegue en Railway (`dev` y `production`)
 
-Las flags de la CLI cambian entre versiones: revisa `railway --help` y `railway <cmd> --help` antes de usarlas.
+El proyecto y los Postgres ya existen (§5.0). Ahora el servicio de la app, en **ambos** entornos, primero `dev`:
 
-1. Crear un **proyecto nuevo** llamado `lifemaxxing-gym` (no reutilizar proyectos existentes). Su entorno por defecto es `production`.
-   ```bash
-   railway init --name lifemaxxing-gym
-   railway add --database postgres
-   railway add --service app
-   ```
+1. Crea el servicio: `railway add --service app` (en `dev` y en `production`; si duplicaste el entorno después, verifica que exista en los dos).
 2. Variables del servicio `app` (CLI reciente: `railway variable set KEY=valor --service app`; versiones antiguas: `railway variables --set "KEY=valor"`):
    - `DATABASE_URL=${{Postgres.DATABASE_URL}}` (variable de referencia, red privada)
    - `NODE_ENV=production`
@@ -474,10 +485,10 @@ Las flags de la CLI cambian entre versiones: revisa `railway --help` y `railway 
    - Imagen final `node:22-slim` con `dist` de la API y la web.
    - Arranque: `node dist/db/migrate.js && node dist/server.js`.
 4. La API sirve la web estática con fallback a `index.html` para las rutas del router, sin pisar `/api/*`.
-5. Desplegar con `railway up --service app --detach` y generar dominio con `railway domain --service app`.
+5. Desplegar con `railway up --service app --environment dev --detach`, probar `https://<dominio-dev>/api/health`, y recién entonces lo mismo con `--environment production`. Generar dominio en cada entorno con `railway domain --service app --environment <env>`. Railway construye la imagen con el `Dockerfile` en sus servidores.
 6. Healthcheck de Railway en `/api/health`.
-7. Guardar la URL pública en `docs/REPORTE_NOCHE.md` y como `EXPO_PUBLIC_API_URL` en `apps/mobile/.env.production` (es pública, no es secreto).
-8. **Usuario de prueba:** crear el usuario de Renzo vía `POST /api/auth/register` con una contraseña generada aleatoriamente. Escribir esa contraseña **solo** en `~/Repos/lifemaxxing_gym_app/.secrets/credenciales.txt` (en `.gitignore`) e indicar en el reporte dónde está y que debe cambiarla.
+7. Guardar las URLs en `docs/REPORTE_NOCHE.md`. En la app: `apps/mobile/.env.development` con `EXPO_PUBLIC_API_URL=<dominio-dev>` (o `http://localhost:3000` si corres la API local contra la DB `dev`) y `apps/mobile/.env.production` con el dominio de producción. Son URLs públicas, no secretos.
+8. **Usuarios:** en `dev` crea un usuario de prueba para los smoke tests. En `production` crea el usuario de Renzo vía `POST /api/auth/register` con una contraseña generada aleatoriamente. Escribir esa contraseña **solo** en `~/Repos/lifemaxxing_gym_app/.secrets/credenciales.txt` (en `.gitignore`) e indicar en el reporte dónde está y que debe cambiarla.
 
 ---
 
@@ -558,8 +569,8 @@ app/
 ## 10. M8 · Verificación final y reporte
 
 1. `pnpm typecheck && pnpm test`, todo en verde.
-2. Migraciones desde cero sobre una DB vacía local y luego sobre Railway (ya aplicadas en el deploy).
-3. **Smoke test** en `scripts/smoke.sh` contra producción: `health` → login → `program/today` → crear sesión → 2 sets → finish → check-in → `stats/overview`. Luego borrar los datos de prueba con `discard` o con los endpoints DELETE.
+2. Migraciones desde cero en un schema temporal de la DB `dev` (lo hacen los tests) y ya aplicadas en `dev` y `production` por el deploy.
+3. **Smoke test** en `scripts/smoke.sh`, primero contra `dev` y después contra producción: `health` → login → `program/today` → crear sesión → 2 sets → finish → check-in → `stats/overview`. Luego borrar los datos de prueba con `discard` o con los endpoints DELETE.
 4. Abrir la web de producción con Playwright (si está instalado):
    - Capturas de login, Resumen, Entrenar y Plan en 390 px y 1280 px, en modo claro y oscuro.
    - Guardarlas en `docs/capturas/`.
@@ -569,7 +580,7 @@ app/
 6. `docs/REPORTE_NOCHE.md` con:
    - Qué quedó hecho por hito (✅ / 🟡 / ❌).
    - URL de producción y dónde está la contraseña (no la contraseña).
-   - Cómo correr local (`pnpm db:up && pnpm db:migrate && pnpm dev`).
+   - Cómo correr en desarrollo (`pnpm dev`: API local contra la DB `dev` de Railway + Expo).
    - Cómo probar en el iPhone.
    - Bloqueos encontrados y decisiones tomadas (con enlace a `DECISIONES.md`).
    - Siguientes pasos.
