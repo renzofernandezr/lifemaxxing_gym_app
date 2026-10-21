@@ -8,17 +8,15 @@ import { IconChevron } from "../../components/icons";
 import { RestBar } from "../../components/rest";
 import { Sheet } from "../../components/sheet";
 import { useToast } from "../../components/toast";
-import { Button, Loading, T, useLayout } from "../../components/ui";
+import { Button, Loading, T } from "../../components/ui";
 import { ApiError } from "../../lib/api";
-import { setRestExpanded } from "../../lib/rest";
 import { useWorkout, useWorkoutHydrated, type ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
-import { F, MAX_WIDTH } from "../../theme/tokens";
-import { discardWorkout, finishWorkout, logSet, skipCurrentExercise, SyncPending } from "./actions";
-import { CurrentCard } from "./CurrentCard";
+import { F } from "../../theme/tokens";
+import { discardWorkout, editDoneSet, finishWorkout, logSet, SyncPending } from "./actions";
 import { draftFor, parseNum, type Draft } from "./draft";
 import { nextPending, progress } from "./logic";
-import { ExerciseList, SetsTable } from "./SetsTable";
+import { Dock, ExerciseHeader, ExerciseStrip, SetList } from "./SessionParts";
 
 const close = () => (router.canGoBack() ? router.back() : router.replace("/entrenar"));
 
@@ -68,19 +66,22 @@ function Clock({ startedAt }: { startedAt: string }) {
 function Live({ a }: { a: ActiveWorkout }) {
   useKeepAwake("lmx-session");
   const { c } = useTheme();
-  const { width } = useLayout();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   // -1 = no queda nada pendiente: se muestra "Completaste todas las series".
   const idx = a.items[a.i] && !a.items[a.i].done && !a.items[a.i].skip ? a.i : nextPending(a.items, a.i);
-  const it = idx >= 0 ? a.items[idx] : undefined;
+  const cur = idx >= 0 ? a.items[idx] : undefined;
+  // Serie ya registrada que se está corrigiendo (se elige tocándola en la tabla).
+  const [sel, setSel] = useState<number | null>(null);
+  const editing = sel !== null && !!a.items[sel]?.done && a.items[sel].ei === cur?.ei ? sel : null;
+  const it = editing !== null ? a.items[editing] : cur;
   const [draft, setDraft] = useState<Draft>(() => (it ? draftFor(it) : { key: "", w: "0", r: "0" }));
   const [busy, setBusy] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const queue = useWorkout((s) => s.queue.length);
 
-  // Al cambiar de serie, la tarjeta toma los valores planificados de la nueva.
+  // Al cambiar de serie (o al elegir una para corregir), el panel toma sus valores.
   useEffect(() => {
     if (it && draft.key !== it.key) setDraft(draftFor(it));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,6 +91,8 @@ function Live({ a }: { a: ActiveWorkout }) {
     if (it && draft.key === it.key && !it.done) setDraft((d) => ({ ...d, w: draftFor(it).w }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [it?.w]);
+  // Al pasar a otro ejercicio se cancela la corrección.
+  useEffect(() => setSel(null), [cur?.ei]);
 
   const finish = async () => {
     setBusy(true);
@@ -112,21 +115,29 @@ function Live({ a }: { a: ActiveWorkout }) {
     }
   };
 
+  const readDraft = () => ({ w: parseNum(draft.w), r: parseInt(draft.r, 10) || 0 });
+
   const onLog = async () => {
-    if (!it || busy) return;
-    const w = parseNum(draft.w);
-    const r = parseInt(draft.r, 10) || 0;
+    if (!cur || busy) return;
+    const { w, r } = readDraft();
     if (r <= 0) {
       toast("Escribe cuántas reps hiciste", "error");
       return;
     }
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const res = await logSet(idx, w, r);
-    if (res?.calibration) setRestExpanded(true);
     if (res?.finished) await finish();
   };
 
-  if (!it) {
+  const onSaveEdit = () => {
+    if (editing === null) return;
+    const { w, r } = readDraft();
+    editDoneSet(editing, w, r);
+    setSel(null);
+    toast("Serie corregida", "info");
+  };
+
+  if (!cur || !it) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: "center", alignItems: "center", gap: 14, padding: 24 }}>
         <T v="h2">Completaste todas las series</T>
@@ -137,55 +148,63 @@ function Live({ a }: { a: ActiveWorkout }) {
   }
 
   const p = progress(a.items);
-  const twoCols = width >= 920;
+  const view = { ...a, i: idx };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={{ backgroundColor: c.hdr, borderBottomWidth: 1, borderBottomColor: c.line, paddingTop: insets.top }}>
-        <View style={{ width: "100%", maxWidth: MAX_WIDTH, alignSelf: "center", paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8, gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Minimizar la sesión" hitSlop={10} style={{ padding: 4 }}>
               <IconChevron dir="down" color={c.fg} size={22} />
             </Pressable>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <T v="eyebrow" numberOfLines={1}>
-                {a.routine.focus}
-              </T>
-              <T v="h2" numberOfLines={1}>
+              <T style={{ fontFamily: F.bold, fontSize: 17, lineHeight: 21 }} numberOfLines={1}>
                 {a.routine.name}
               </T>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Clock startedAt={a.startedAt} />
+                <T v="small" muted num>
+                  · {p.done}/{p.total} series
+                </T>
+                {queue ? <T v="small" color={c.accentInk}>· {queue} por sincronizar</T> : null}
+              </View>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Clock startedAt={a.startedAt} />
-              {queue ? <T v="tiny" color={c.accentInk}>{queue} por sincronizar</T> : null}
-            </View>
+            <Button small title="Terminar" onPress={() => setConfirmEnd(true)} />
           </View>
-          <View style={{ height: 6, backgroundColor: c.surface2, borderRadius: 3, overflow: "hidden" }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: p.total, now: p.done }}>
-            <View style={{ height: 6, width: `${p.pct * 100}%`, backgroundColor: c.accent }} />
+          <View style={{ height: 4, backgroundColor: c.surface2, borderRadius: 2, overflow: "hidden" }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: p.total, now: p.done }}>
+            <View style={{ height: 4, width: `${p.pct * 100}%`, backgroundColor: c.accent }} />
           </View>
         </View>
       </View>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140 + insets.bottom }}>
-        <View style={{ width: "100%", maxWidth: MAX_WIDTH, alignSelf: "center", padding: 16, gap: 16, flexDirection: twoCols ? "row" : "column", alignItems: twoCols ? "flex-start" : "stretch" }}>
-          <View style={{ flex: twoCols ? 1.35 : undefined, gap: 16, minWidth: 0 }}>
-            <CurrentCard a={a} it={it} draft={draft} setDraft={setDraft} onLog={onLog} busy={busy} />
-            <SetsTable a={{ ...a, i: idx }} draft={draft} setDraft={setDraft} onLog={onLog} />
-          </View>
-          <View style={{ flex: twoCols ? 1 : undefined, gap: 12, minWidth: 0 }}>
-            <ExerciseList a={{ ...a, i: idx }} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-              <Button
-                title="Saltar ejercicio"
-                onPress={() => {
-                  if (skipCurrentExercise()) setConfirmEnd(true);
-                }}
-              />
-              <Button title="Terminar ya" onPress={() => setConfirmEnd(true)} />
-            </View>
-          </View>
+
+      <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
+        <ExerciseStrip a={view} curEi={cur.ei} />
+      </View>
+
+      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+        <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 12 }}>
+          <ExerciseHeader a={view} it={cur} />
+          <SetList a={view} curIdx={idx} selIdx={editing} draft={draft} onSelectDone={setSel} onLog={onLog} />
         </View>
       </ScrollView>
-      <RestBar bottom={insets.bottom + 12} />
+
+      <View style={{ paddingHorizontal: 12, paddingBottom: 8, alignItems: "center" }}>
+        <RestBar inline />
+      </View>
+      <Dock
+        a={view}
+        it={it}
+        editing={editing !== null}
+        draft={draft}
+        setDraft={setDraft}
+        onLog={onLog}
+        onSaveEdit={onSaveEdit}
+        onCancelEdit={() => setSel(null)}
+        busy={busy}
+        bottomInset={insets.bottom}
+      />
+
       <Sheet open={confirmEnd} onClose={() => setConfirmEnd(false)} title="¿Terminar el entrenamiento?">
         <T v="small" muted>
           Llevas {p.done} de {p.total} series. Las que faltan quedan sin hacer y verás el resumen con lo que registraste.

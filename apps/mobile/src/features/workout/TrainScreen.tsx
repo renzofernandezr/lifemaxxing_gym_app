@@ -92,128 +92,126 @@ function Preview({ t, activeLocal }: { t: TodayResponse; activeLocal: string | n
 
   const dayLabel = pos.beforeStart ? `Empieza el ${me?.profile.programStartDate ?? ""}` : `Semana ${Math.max(1, pos.week)} · ${pos.dayName}`;
   const cols = width < 480;
+  const totalSets = routine ? routine.exercises.reduce((n, re) => n + re.sets.length + (calibrate && needsCalibration(re, t.suggestions[re.id], true) ? 1 : 0), 0) : 0;
+  const todayLine = pos.routineKey
+    ? null
+    : `Hoy: descanso activo, camina 40–60 min. Próximo: ${nx.dayName}, ${routineName(nx.routineKey ?? "A")}.`;
 
   return (
-    <Screen>
-      <ViewHead eyebrow={dayLabel} title="Entrenar" />
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <Screen bottomPad={24}>
+        <ViewHead eyebrow={dayLabel} title="Entrenar" />
 
-      {pendingId ? (
-        <Card style={{ gap: 12, borderColor: c.accent, borderWidth: 2 }}>
-          <Pill tone="solid">En curso</Pill>
-          <T v="h3">{activeLocal ? "Tienes un entrenamiento sin terminar" : "Hay un entrenamiento en curso"}</T>
-          <T v="small" muted>
-            {activeLocal ? "Tus series están guardadas en este dispositivo. Retómalo donde lo dejaste." : "Se empezó en otro dispositivo o se cerró la app. Puedes retomarlo aquí o descartarlo."}
-          </T>
-          <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-            <Button variant="primary" small title="Reanudar" loading={busy} onPress={() => resume(pendingId)} style={{ flexGrow: 1 }} />
-            <Button small title="Descartar" disabled={busy} onPress={() => discard(pendingId)} />
-          </View>
-        </Card>
-      ) : null}
-
-      <Card style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
-        {pos.routineKey ? (
-          <>
-            <Pill>Hoy toca</Pill>
-            <T style={{ fontFamily: F.bold }}>{routineName(pos.routineKey)}</T>
+        {pendingId ? (
+          <Card style={{ gap: 12, borderColor: c.accent, borderWidth: 2 }}>
+            <Pill tone="solid">En curso</Pill>
+            <T v="h3">{activeLocal ? "Tienes un entrenamiento sin terminar" : "Hay un entrenamiento en curso"}</T>
             <T v="small" muted>
-              {t.routines.find((r) => r.key === pos.routineKey)?.focus}
+              {activeLocal ? "Tus series están guardadas en este dispositivo. Retómalo donde lo dejaste." : "Se empezó en otro dispositivo o se cerró la app. Puedes retomarlo aquí o descartarlo."}
             </T>
-          </>
-        ) : (
-          <>
-            <Pill tone="neutral">Hoy</Pill>
-            <T style={{ fontFamily: F.bold }}>Descanso activo</T>
-            <T v="small" muted style={{ flexShrink: 1 }}>
-              Camina 40–60 min. Próximo: {nx.dayName}, {routineName(nx.routineKey ?? "A")}.
-            </T>
-          </>
-        )}
-      </Card>
+            <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+              <Button variant="primary" small title="Reanudar" loading={busy} onPress={() => resume(pendingId)} style={{ flexGrow: 1 }} />
+              <Button small title="Descartar" disabled={busy} onPress={() => discard(pendingId)} />
+            </View>
+          </Card>
+        ) : null}
 
-      <View style={{ flexDirection: "row", gap: 10 }} accessibilityRole="radiogroup" accessibilityLabel="Elige la sesión">
-        {t.routines.map((r) => {
-          const on = r.key === key;
-          const isNext = r.key === (pos.routineKey ?? nx.routineKey);
-          return (
-            <Pressable
-              key={r.id}
-              onPress={() => setKey(r.key)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              style={{ flex: 1, minWidth: 0, borderWidth: 1.5, borderColor: on ? c.accent : c.line, backgroundColor: on ? c.accentSoft : c.surface, borderRadius: R, padding: cols ? 10 : 14, gap: 4 }}
-            >
-              <T style={{ fontFamily: F.bold, fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: c.accentInk, opacity: isNext ? 1 : 0 }}>
-                {pos.routineKey ? "Hoy" : "Próxima"}
-              </T>
-              <T style={{ fontFamily: F.bold, fontSize: cols ? 15 : 19, lineHeight: cols ? 18 : 22 }} numberOfLines={2}>
-                {cols && r.key === "C" ? "Cardio" : r.name}
-              </T>
-              <T style={{ fontSize: 12, lineHeight: 15, color: c.muted }} numberOfLines={2}>
-                {r.focus}
-              </T>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {needsCal ? (
-        <Pressable
-          onPress={() => setCalibrate((v) => !v)}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: calibrate }}
-          style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: R, padding: 14 }}
-        >
-          <Switch value={calibrate} onValueChange={setCalibrate} trackColor={{ true: c.accent, false: c.line }} thumbColor="#fff" accessibilityElementsHidden />
-          <View style={{ flex: 1, gap: 2 }}>
-            <T style={{ fontFamily: F.bold }}>Primera sesión: calibrar cargas</T>
+        <View style={{ gap: 8 }}>
+          {todayLine ? (
             <T v="small" muted>
-              En cada básico y en las piernas haces una serie de prueba. Con ella la app estima tu 1RM y calcula el peso de todas tus series. Desde la segunda sesión manda la doble progresión.
+              {todayLine}
             </T>
+          ) : null}
+          <View style={{ flexDirection: "row", gap: 8 }} accessibilityRole="radiogroup" accessibilityLabel="Elige la sesión">
+            {t.routines.map((r) => {
+              const on = r.key === key;
+              const isNext = r.key === (pos.routineKey ?? nx.routineKey);
+              return (
+                <Pressable
+                  key={r.id}
+                  onPress={() => setKey(r.key)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  style={{ flex: 1, minWidth: 0, borderWidth: 1.5, borderColor: on ? c.accent : c.line, backgroundColor: on ? c.accentSoft : c.surface, borderRadius: R, paddingVertical: 10, paddingHorizontal: cols ? 10 : 14, gap: 2 }}
+                >
+                  <T style={{ fontFamily: F.bold, fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: c.accentInk, opacity: isNext ? 1 : 0 }}>
+                    {pos.routineKey ? "Hoy" : "Próxima"}
+                  </T>
+                  <T style={{ fontFamily: F.bold, fontSize: cols ? 15 : 18, lineHeight: cols ? 18 : 22 }} numberOfLines={1}>
+                    {cols && r.key === "C" ? "Cardio" : r.name}
+                  </T>
+                  <T style={{ fontSize: 12, lineHeight: 15, color: c.muted }} numberOfLines={1}>
+                    {r.focus}
+                  </T>
+                </Pressable>
+              );
+            })}
           </View>
-        </Pressable>
-      ) : null}
+        </View>
 
-      {routine ? (
-        <Card>
-          <CardHead title={routine.name} right={routine.focus} />
-          {routine.exercises.map((re, i) => {
-            const sug = t.suggestions[re.id];
-            const cal = calibrate && needsCalibration(re, sug, true);
-            const loads = sug?.weights && sug.weights.some((w) => w > 0) && re.scheme !== "cardio" ? sug.weights : null;
-            return (
-              <View key={re.id} style={{ flexDirection: "row", gap: 12, alignItems: "center", paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
-                <T v="tiny" muted style={{ width: 22 }} num>
-                  {String(i + 1).padStart(2, "0")}
-                </T>
-                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <T style={{ fontFamily: F.bold }}>
-                    {re.exercise.name}
-                    {re.isAddition ? <T style={{ fontFamily: F.bold, fontSize: 10, color: c.bronze }}>  AÑADIDO</T> : null}
-                    {cal ? <T style={{ fontFamily: F.bold, fontSize: 10, color: c.bronze }}>  + SERIE DE PRUEBA</T> : null}
+        {needsCal ? (
+          <Pressable
+            onPress={() => setCalibrate((v) => !v)}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: calibrate }}
+            style={{ flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: R, paddingVertical: 10, paddingHorizontal: 14 }}
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <T style={{ fontFamily: F.bold, fontSize: 14 }}>Primera sesión: calibrar cargas</T>
+              <T v="small" muted>
+                Una serie de prueba en cada básico calcula el peso de todas tus series.
+              </T>
+            </View>
+            <Switch value={calibrate} onValueChange={setCalibrate} trackColor={{ true: c.accent, false: c.line }} thumbColor="#fff" accessibilityElementsHidden />
+          </Pressable>
+        ) : null}
+
+        {routine ? (
+          <Card pad={14}>
+            <CardHead title={routine.name} right={routine.focus} />
+            {routine.exercises.map((re, i) => {
+              const sug = t.suggestions[re.id];
+              const cal = calibrate && needsCalibration(re, sug, true);
+              const loads = sug?.weights && sug.weights.some((w) => w > 0) && re.scheme !== "cardio" ? sug.weights : null;
+              return (
+                <View key={re.id} style={{ flexDirection: "row", gap: 10, alignItems: "center", paddingVertical: 9, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
+                  <T v="tiny" muted style={{ width: 20 }} num>
+                    {String(i + 1).padStart(2, "0")}
                   </T>
-                  <T v="small" muted>
-                    {SCHEME_NAME[re.scheme]} · {re.note && re.altExerciseId ? re.note : EQUIPMENT_NAME[re.exercise.equipment]}
-                  </T>
-                  {loads ? (
-                    <T v="small" num style={{ color: sug?.reachedTop ? c.good : c.muted, fontFamily: F.medium }}>
-                      Hoy: {loads.map(fk).join(" · ")} kg{re.exercise.equipment === "mancuernas" ? " por mano" : ""}
-                      {sug?.reachedTop ? " · subes" : ""}
+                  <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                    <T style={{ fontFamily: F.bold, fontSize: 14 }} numberOfLines={1}>
+                      {re.exercise.name}
                     </T>
-                  ) : null}
+                    <T v="small" num numberOfLines={1} style={{ color: cal ? c.bronze : loads && sug?.reachedTop ? c.good : c.muted, fontFamily: cal || loads ? F.medium : F.regular }}>
+                      {cal
+                        ? "+ serie de prueba"
+                        : loads
+                          ? `${sug?.reachedTop ? "↑ " : ""}${loads.map(fk).join(" · ")} kg${re.exercise.equipment === "mancuernas" ? " por mano" : ""}`
+                          : `${SCHEME_NAME[re.scheme]} · ${EQUIPMENT_NAME[re.exercise.equipment]}${re.isAddition ? " · añadido" : ""}`}
+                    </T>
+                  </View>
+                  <T v="small" num style={{ fontFamily: F.medium, color: c.muted, textAlign: "right" }}>
+                    {setsText(re)}
+                  </T>
                 </View>
-                <T v="small" num style={{ fontFamily: F.medium, color: c.muted, textAlign: "right" }}>
-                  {setsText(re)}
-                </T>
-              </View>
-            );
-          })}
-        </Card>
-      ) : (
-        <Empty title="Sin rutina" text="No encontré la rutina de hoy." />
-      )}
+              );
+            })}
+          </Card>
+        ) : (
+          <Empty title="Sin rutina" text="No encontré la rutina de hoy." />
+        )}
+      </Screen>
 
-      <Button variant="primary" title="Empezar entrenamiento" loading={busy} disabled={!!pendingId || !routine} onPress={start} />
-    </Screen>
+      <View style={{ backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.line, paddingHorizontal: 16, paddingVertical: 10 }}>
+        <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 6 }}>
+          {routine ? (
+            <T v="small" muted center num>
+              {routine.name} · {routine.exercises.length} ejercicios · {totalSets} series
+            </T>
+          ) : null}
+          <Button variant="primary" title="Empezar entrenamiento" loading={busy} disabled={!!pendingId || !routine} onPress={start} />
+        </View>
+      </View>
+    </View>
   );
 }

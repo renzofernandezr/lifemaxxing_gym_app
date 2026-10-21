@@ -383,6 +383,8 @@ export function Stepper({
   compact,
   keyboardType = "decimal-pad",
   onBlur,
+  dense,
+  flex = 1,
 }: {
   label: string;
   value: string;
@@ -391,9 +393,14 @@ export function Stepper({
   compact?: boolean;
   keyboardType?: TextInputProps["keyboardType"];
   onBlur?: () => void;
+  /** Botones más angostos y número algo menor (panel inferior de la sesión). */
+  dense?: boolean;
+  flex?: number;
 }) {
   const { c } = useTheme();
   const h = compact ? 40 : 56;
+  const btnW = compact ? 36 : dense ? 44 : 52;
+  const fontSize = compact ? 18 : dense ? 28 : 32;
   const btn = (dir: -1 | 1) => (
     <Pressable
       onPress={() => onStep(dir)}
@@ -401,7 +408,7 @@ export function Stepper({
       accessibilityLabel={`${dir < 0 ? "Menos" : "Más"} ${label.toLowerCase()}`}
       hitSlop={4}
       style={({ pressed }) => ({
-        width: compact ? 36 : 52,
+        width: btnW,
         height: h,
         borderRadius: 8,
         borderWidth: 1,
@@ -415,7 +422,7 @@ export function Stepper({
     </Pressable>
   );
   return (
-    <View style={{ gap: 6, flex: 1, minWidth: 0 }}>
+    <View style={{ gap: 6, flex, minWidth: 0 }}>
       {!compact ? <T v="label">{label}</T> : null}
       <View style={{ flexDirection: "row", gap: compact ? 4 : 6, alignItems: "center" }}>
         {btn(-1)}
@@ -427,7 +434,7 @@ export function Stepper({
           selectTextOnFocus
           accessibilityLabel={label}
           style={[
-            { flex: 1, minWidth: 0, height: h, textAlign: "center", fontFamily: F.extrabold, fontSize: compact ? 18 : 32, color: c.fg, backgroundColor: c.bg, borderWidth: 1, borderColor: c.line, borderRadius: 8, fontVariant: ["tabular-nums"], paddingHorizontal: 2 },
+            { flex: 1, minWidth: 0, height: h, textAlign: "center", fontFamily: F.extrabold, fontSize, color: c.fg, backgroundColor: c.bg, borderWidth: 1, borderColor: c.line, borderRadius: 8, fontVariant: ["tabular-nums"], paddingHorizontal: 2 },
             Platform.OS === "web" ? ({ outlineColor: c.accent } as TextStyle) : null,
           ]}
         />

@@ -84,7 +84,7 @@ async function doStartRest(seconds: number, title: string, next: string | null, 
   const prev = useWorkout.getState().rest;
   await cancel(prev?.notificationId);
   const endAt = Date.now() + seconds * 1000;
-  const rest: RestState = { endAt, total: seconds * 1000, title, next, info, notificationId: null, expanded: false };
+  const rest: RestState = { endAt, total: seconds * 1000, title, next, info, notificationId: null, expanded: true };
   useWorkout.getState().setRest(rest);
   const id = await schedule(endAt, next);
   const cur = useWorkout.getState().rest;
