@@ -10,7 +10,7 @@ import {
 } from "@lifemaxxing/core";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, Switch, View } from "react-native";
+import { Platform, Pressable, Switch, View } from "react-native";
 import { useToast } from "../../components/toast";
 import { Button, Card, CardHead, Empty, ErrorBox, Loading, Pill, Screen, T, useLayout, ViewHead } from "../../components/ui";
 import { ApiError } from "../../lib/api";
@@ -225,6 +225,7 @@ function Preview({ t, activeLocal }: { t: TodayResponse; activeLocal: string | n
               onValueChange={setCalibrate}
               trackColor={{ true: c.accent, false: c.line }}
               thumbColor="#fff"
+              {...(Platform.OS === "web" ? { activeThumbColor: "#fff" } : {})}
               aria-hidden
             />
           </Pressable>

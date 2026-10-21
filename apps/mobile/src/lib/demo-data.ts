@@ -59,6 +59,7 @@ import {
   type WorkoutSetDTO,
 } from "@lifemaxxing/core";
 import { ApiError } from "./api";
+import { demoMode, type DemoMode } from "./demo";
 
 const TZ = DEFAULT_TIMEZONE;
 const KEYS: RoutineKey[] = ["A", "B", "C"];
@@ -129,6 +130,7 @@ interface DemoSession {
 }
 
 interface World {
+  mode: DemoMode;
   today: string;
   user: UserDTO;
   profile: ProfileDTO;
@@ -144,7 +146,8 @@ let world: World | null = null;
 
 function getWorld(): World {
   const today = localDate(new Date(), TZ);
-  if (!world || world.today !== today) world = build(today);
+  const m = demoMode() ?? "historial";
+  if (!world || world.today !== today || world.mode !== m) world = m === "nuevo" ? buildNew(today) : build(today);
   return world;
 }
 
@@ -343,7 +346,15 @@ function build(today: string): World {
     { id: uuid(5, 3), measuredOn: addDays(start, 56), chestCm: 110.5, armCm: 38.8, waistCm: 99 },
   ].filter((x) => x.measuredOn <= today);
 
-  return { today, user, profile, sessions, checkins, measurements, seq: 100, active: null };
+  return { mode: "historial", today, user, profile, sessions, checkins, measurements, seq: 100, active: null };
+}
+
+/** Usuario nuevo: semana 1 de la Fase 1, sin entrenos, check-ins ni 1RM. */
+function buildNew(today: string): World {
+  const start = mondayOf(today);
+  const profile: ProfileDTO = { heightCm: 186, startWeightKg: 105.6, goalWeightKg: 88, programStartDate: start, timezone: TZ, theme: "system" };
+  const user: UserDTO = { id: uuid(9, 2), email: "demo@lifemaxxing.app", name: "Renzo", createdAt: `${start}T15:00:00.000Z` };
+  return { mode: "nuevo", today, user, profile, sessions: [], checkins: [], measurements: [], seq: 100, active: null };
 }
 
 // ── Respuestas ──────────────────────────────────────────
@@ -493,7 +504,7 @@ function suggestionFor(w: World, ex: ResolvedExercise, synthesize: boolean): Loa
     lastDate = s.summary.startedAt;
     for (const x of e.sets) if (x.weightKg > 0 && x.reps > 0 && (!best || e1rm(x.weightKg, x.reps) > e1rm(best.weightKg, best.reps))) best = x;
   }
-  if (!lastSets && synthesize && BASE[ex.exerciseId]) {
+  if (!lastSets && synthesize && w.mode === "historial" && BASE[ex.exerciseId]) {
     // Sin historial en la demo (p. ej. la rutina B de la fase 2): una "última vez" plausible hace una semana.
     lastSets = setsFor(ex, 1);
     lastDate = `${addDays(w.today, -7)}T12:00:00.000Z`;

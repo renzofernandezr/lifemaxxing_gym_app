@@ -47,7 +47,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "lint": "expo lint",
-    "demo": "EXPO_PUBLIC_DEMO=1 expo start --lan"
+    "demo": "EXPO_PUBLIC_DEMO=1 expo start --lan",
+    "demo:nuevo": "EXPO_PUBLIC_DEMO=nuevo expo start --lan"
   },
   "private": true
 }
