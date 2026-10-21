@@ -2,7 +2,7 @@ import { secondsText } from "@lifemaxxing/core";
 import { useEffect, useRef, useState } from "react";
 import { Animated, BackHandler, Easing, Platform, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle, Defs, Ellipse, LinearGradient, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, RadialGradient, Rect, Stop } from "react-native-svg";
 import { press, tap, tick } from "../lib/haptics";
 import { adjustRest, beep, restDone, setRestExpanded, skipRest } from "../lib/rest";
 import { useWorkout } from "../store/workout";
@@ -115,7 +115,7 @@ export function RestBar({ bottom = 0, inline = false }: { bottom?: number; inlin
   );
 }
 
-// Dial en relieve (como un disco): viewBox 240×240, centro (120, 120).
+// Anillo del descanso: viewBox 240×240, centro (120, 120).
 const VB = 240;
 const CX = 120;
 const RING_R = 104;
@@ -123,15 +123,9 @@ const RING_C = 2 * Math.PI * RING_R;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface DialColors {
-  rimHi: string;
-  rimLo: string;
-  groove: string;
-  faceHi: string;
-  faceLo: string;
+  track: string;
   arcHi: string;
   arcLo: string;
-  gloss: number;
-  shade: number;
 }
 
 function dialColors(scheme: "light" | "dark", done: boolean): DialColors {
@@ -143,13 +137,11 @@ function dialColors(scheme: "light" | "dark", done: boolean): DialColors {
     : dark
       ? { arcHi: "#FFA766", arcLo: "#E05500" }
       : { arcHi: "#FF9447", arcLo: "#D95200" };
-  return dark
-    ? { rimHi: "#4C5658", rimLo: "#1C2224", groove: "#1A2022", faceHi: "#404A4C", faceLo: "#262D2F", gloss: 0.1, shade: 0.45, ...arc }
-    : { rimHi: "#FFFFFF", rimLo: "#D4D7D7", groove: "#DADDDD", faceHi: "#FFFFFF", faceLo: "#E8EAEA", gloss: 0.7, shade: 0.18, ...arc };
+  return { track: dark ? "#3A4345" : "#E4E6E6", ...arc };
 }
 
 /** Web: avance del anillo por requestAnimationFrame (Animated sobre <circle> deja props inválidas en el DOM). */
-function WebArc({ endAt, total, stroke }: { endAt: number; total: number; stroke: string }) {
+function WebArc({ endAt, total, stroke, width = 8, opacity = 1 }: { endAt: number; total: number; stroke: string; width?: number; opacity?: number }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     let id = 0;
@@ -171,7 +163,8 @@ function WebArc({ endAt, total, stroke }: { endAt: number; total: number; stroke
       cy={CX}
       r={RING_R}
       stroke={stroke}
-      strokeWidth={14}
+      strokeOpacity={opacity}
+      strokeWidth={width}
       strokeLinecap="round"
       fill="none"
       strokeDasharray={`${RING_C}`}
@@ -206,16 +199,16 @@ function KeyButton({ title, onPress, primary, style }: { title: string; onPress:
             backgroundColor: face,
             borderWidth: primary ? 0 : 1,
             borderColor: c.line,
-            borderBottomWidth: pressed ? 2 : 5,
+            borderBottomWidth: pressed ? 1 : 3,
             borderBottomColor: edge,
             alignItems: "center",
             justifyContent: "center",
             transform: [{ translateY: pressed ? 3 : 0 }],
             shadowColor: "#000",
-            shadowOpacity: pressed ? 0.08 : 0.18,
-            shadowRadius: pressed ? 4 : 10,
-            shadowOffset: { width: 0, height: pressed ? 2 : 6 },
-            elevation: pressed ? 2 : 6,
+            shadowOpacity: pressed ? 0.04 : 0.1,
+            shadowRadius: pressed ? 2 : 6,
+            shadowOffset: { width: 0, height: pressed ? 1 : 3 },
+            elevation: pressed ? 1 : 3,
           }}
         >
           <T style={{ fontFamily: F.extrabold, fontSize: primary ? 19 : 18, color: primary ? c.onAccent : c.fg }}>{title}</T>
@@ -301,7 +294,7 @@ export function RestScreen() {
     cx: CX,
     cy: CX,
     r: RING_R,
-    strokeWidth: 14,
+    strokeWidth: 8,
     strokeLinecap: "round" as const,
     fill: "none",
     strokeDasharray: `${RING_C}`,
@@ -359,74 +352,27 @@ export function RestScreen() {
             <Animated.View
               style={{ width: ring, height: ring, alignItems: "center", justifyContent: "center", transform: [{ scale: breathe }] }}
             >
-              {/* Sombra del dial sobre el fondo */}
-              <View
-                style={{
-                  position: "absolute",
-                  width: ring * 0.94,
-                  height: ring * 0.94,
-                  borderRadius: ring,
-                  backgroundColor: k.rimLo,
-                  shadowColor: done ? c.good : "#000",
-                  shadowOpacity: done ? 0.45 : k.shade,
-                  shadowRadius: 26,
-                  shadowOffset: { width: 0, height: 16 },
-                  elevation: 18,
-                }}
-              />
+              {/* Anillo fino: pista delgada, arco con degradado y un halo suave (sin relieve grueso). */}
               <Svg viewBox={`0 0 ${VB} ${VB}`} width={ring} height={ring} style={{ position: "absolute" }}>
                 <Defs>
-                  <LinearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={k.rimHi} />
-                    <Stop offset="1" stopColor={k.rimLo} />
-                  </LinearGradient>
-                  <RadialGradient id="face" cx="42%" cy="32%" r="78%">
-                    <Stop offset="0" stopColor={k.faceHi} />
-                    <Stop offset="1" stopColor={k.faceLo} />
-                  </RadialGradient>
                   <LinearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
                     <Stop offset="0" stopColor={k.arcHi} />
                     <Stop offset="1" stopColor={k.arcLo} />
                   </LinearGradient>
-                  <LinearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#FFFFFF" stopOpacity={k.gloss} />
-                    <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
-                  </LinearGradient>
                 </Defs>
-                {/* Borde biselado */}
-                <Circle cx={CX} cy={CX} r={118} fill="url(#rim)" />
-                <Circle
-                  cx={CX}
-                  cy={CX}
-                  r={117}
-                  fill="none"
-                  stroke="#FFFFFF"
-                  strokeOpacity={scheme === "dark" ? 0.08 : 0.9}
-                  strokeWidth={1}
-                />
-                {/* Ranura hundida */}
-                <Circle cx={CX} cy={CX} r={RING_R} fill="none" stroke={k.groove} strokeWidth={18} />
-                <Circle cx={CX} cy={CX - 1.5} r={RING_R + 7} fill="none" stroke="#000" strokeOpacity={0.1} strokeWidth={1.5} />
-                <Circle
-                  cx={CX}
-                  cy={CX + 1}
-                  r={RING_R - 8}
-                  fill="none"
-                  stroke="#FFFFFF"
-                  strokeOpacity={scheme === "dark" ? 0.06 : 0.7}
-                  strokeWidth={1.5}
-                />
-                {/* Progreso con sombra propia */}
-                <Circle {...arcProps} cy={CX + 2.5} origin={`${CX}, ${CX + 2.5}`} stroke="#000" strokeOpacity={0.16} strokeDashoffset={0} />
+                <Circle cx={CX} cy={CX} r={RING_R} fill="none" stroke={k.track} strokeWidth={5} />
+                <Circle cx={CX} cy={CX} r={RING_R - 14} fill="none" stroke={k.track} strokeOpacity={0.6} strokeWidth={1} />
                 {Platform.OS === "web" ? (
-                  <WebArc endAt={v.rest.endAt} total={v.rest.total} stroke="url(#arc)" />
+                  <>
+                    <WebArc endAt={v.rest.endAt} total={v.rest.total} stroke={k.arcLo} width={16} opacity={0.12} />
+                    <WebArc endAt={v.rest.endAt} total={v.rest.total} stroke="url(#arc)" width={8} />
+                  </>
                 ) : (
-                  <AnimatedCircle {...arcProps} stroke="url(#arc)" strokeDashoffset={done ? RING_C : (dashoffset as unknown as number)} />
+                  <>
+                    <AnimatedCircle {...arcProps} strokeWidth={16} stroke={k.arcLo} strokeOpacity={0.12} strokeDashoffset={done ? RING_C : (dashoffset as unknown as number)} />
+                    <AnimatedCircle {...arcProps} stroke="url(#arc)" strokeDashoffset={done ? RING_C : (dashoffset as unknown as number)} />
+                  </>
                 )}
-                {/* Cara abombada con brillo */}
-                <Circle cx={CX} cy={CX + 3} r={88} fill="#000" fillOpacity={scheme === "dark" ? 0.35 : 0.08} />
-                <Circle cx={CX} cy={CX} r={88} fill="url(#face)" />
-                <Ellipse cx={CX} cy={CX - 42} rx={60} ry={30} fill="url(#gloss)" />
               </Svg>
               <T
                 num
@@ -438,9 +384,9 @@ export function RestScreen() {
                   lineHeight: Math.round(digits * 1.1),
                   letterSpacing: -digits * 0.03,
                   color: done ? c.good : c.fg,
-                  textShadowColor: scheme === "dark" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.12)",
-                  textShadowOffset: { width: 0, height: 3 },
-                  textShadowRadius: 6,
+                  textShadowColor: scheme === "dark" ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.06)",
+                  textShadowOffset: { width: 0, height: 2 },
+                  textShadowRadius: 4,
                 }}
               >
                 {done ? "¡Vamos!" : secondsText(v.left / 1000)}

@@ -5,7 +5,6 @@ import { useState } from "react";
 import { Platform, RefreshControl, View } from "react-native";
 import { PanesScreen } from "../../components/panes";
 import { ViewHead } from "../../components/ui";
-import { isDemo } from "../../lib/demo";
 import { useTheme } from "../../theme/theme";
 import { BodyPane } from "./Body";
 import { CheckinSheet } from "./CheckinSheet";
@@ -32,9 +31,7 @@ export function ProgressScreen() {
   const [sheet, setSheet] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const pos = programPosition(new Date(), start, tz);
-  const eyebrow =
-    (pos.beforeStart ? `Empiezas el ${longDate(start)}` : pos.finished ? "Programa completo" : `Semana ${pos.week} de 24`) +
-    (isDemo() ? " · simulación" : "");
+  const eyebrow = pos.beforeStart ? `Empiezas el ${longDate(start)}` : pos.finished ? "Programa completo" : `Semana ${pos.week} de 24`;
 
   const onRefresh = async () => {
     setRefreshing(true);

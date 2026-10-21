@@ -23,13 +23,14 @@ export function tick() {
 /** Fin del descanso: vibración larga (en iOS cada vibración dura ~0.4 s y el patrón son las pausas entre ellas). */
 export function longBuzz() {
   if (Platform.OS === "ios") {
+    // 6 vibraciones de ~0.4 s con pausas cortas: ~3 s en total.
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(ignore);
-    Vibration.vibrate([0, 120, 120]);
+    Vibration.vibrate([0, 100, 100, 100, 100, 100]);
   } else if (Platform.OS === "android") {
-    Vibration.vibrate([0, 600, 150, 600, 150, 900]);
+    Vibration.vibrate([0, 800, 150, 800, 150, 800, 150, 1200]);
   } else if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     try {
-      navigator.vibrate([500, 150, 500, 150, 800]);
+      navigator.vibrate([700, 150, 700, 150, 700, 150, 1000]);
     } catch {
       // sin soporte
     }

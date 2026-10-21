@@ -16,7 +16,6 @@ import { type ReactNode } from "react";
 import { View } from "react-native";
 import { IconFlame, IconPlus } from "../../components/icons";
 import { Button, Card, CardHead, Divider, Empty, ErrorBox, Grid, Loading, Pill, T, useLayout } from "../../components/ui";
-import { isDemo } from "../../lib/demo";
 import { useOverview, useToday } from "../../lib/queries";
 import { useTheme } from "../../theme/theme";
 import { F, R } from "../../theme/tokens";
@@ -26,26 +25,10 @@ import { longDate, shortDate, signed, useProfileDates } from "./util";
 export function SummaryPane({ onRegister }: { onRegister: () => void }) {
   return (
     <>
-      {isDemo() ? <DemoNotice /> : null}
       <WeekCard />
       <Kpis />
       <CheckinCard onRegister={onRegister} />
     </>
-  );
-}
-
-function DemoNotice() {
-  const { c } = useTheme();
-  return (
-    <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start", backgroundColor: c.bronzeSoft, borderWidth: 1, borderStyle: "dashed", borderColor: c.bronze, borderRadius: R, paddingHorizontal: 14, paddingVertical: 12 }}>
-      <T style={{ color: c.bronze }} aria-hidden>
-        ◐
-      </T>
-      <T v="small" style={{ flex: 1, fontSize: 14, lineHeight: 21 }}>
-        <T v="small" style={{ fontSize: 14, fontFamily: F.bold, color: c.bronze }}>Modo demo. </T>
-        Así se ve tu bitácora tras 8 semanas siguiendo el plan. Los números son simulados a partir de tu punto de partida (105.6 kg) y nada se guarda al recargar.
-      </T>
-    </View>
   );
 }
 

@@ -195,7 +195,7 @@ export default function Ajustes() {
         </Group>
 
         <T v="tiny" muted center style={{ marginTop: 28 }}>
-          Life Maxxing{isDemo() ? " · modo demo" : ""} · {p?.timezone ?? "America/Lima"}
+          Life Maxxing · {p?.timezone ?? "America/Lima"}
         </T>
       </View>
     </ScrollView>
