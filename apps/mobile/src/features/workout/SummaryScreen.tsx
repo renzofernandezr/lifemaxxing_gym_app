@@ -115,7 +115,7 @@ export function SummaryScreen() {
         </Card>
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Button title="Descartar" onPress={discard} loading={busy} style={{ flex: 1 }} />
-          <Button variant="primary" title="Guardar en historial" onPress={save} style={{ flex: 2 }} />
+          <Button variant="primary" title="Guardar" onPress={save} style={{ flex: 2 }} />
         </View>
       </View>
     </ScrollView>

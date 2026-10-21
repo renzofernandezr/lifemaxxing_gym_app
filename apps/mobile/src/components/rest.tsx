@@ -86,18 +86,18 @@ export function RestBar({ bottom = 0 }: { bottom?: number }) {
         <View style={{ height: 4, backgroundColor: c.surface2 }}>
           <View style={{ height: 4, width: `${Math.min(100, frac * 100)}%`, backgroundColor: done ? c.good : c.accent }} />
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 10, paddingLeft: 14 }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <T v="eyebrow" numberOfLines={1}>
-              {done ? "¡Vamos!" : rest.title}
-            </T>
-            <T style={{ fontFamily: F.extrabold, fontSize: 30, lineHeight: 34, color: done ? c.good : c.fg }} num>
+        <View style={{ padding: 10, paddingLeft: 14, gap: 2 }}>
+          <T v="eyebrow" numberOfLines={1}>
+            {done ? "¡Vamos! Terminó el descanso" : rest.title}
+          </T>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <T style={{ flex: 1, minWidth: 0, fontFamily: F.extrabold, fontSize: 30, lineHeight: 34, color: done ? c.good : c.fg }} num>
               {done ? "0:00" : secondsText(left / 1000)}
             </T>
+            <Button small title="−15 s" onPress={() => adjustRest(-15)} />
+            <Button small title="+30 s" onPress={() => adjustRest(30)} />
+            <Button small variant="primary" title={done ? "Seguir" : "Saltar"} onPress={() => skipRest()} />
           </View>
-          <Button small title="−15 s" onPress={() => adjustRest(-15)} />
-          <Button small title="+30 s" onPress={() => adjustRest(30)} />
-          <Button small variant="primary" title={done ? "Seguir" : "Saltar"} onPress={() => skipRest()} />
         </View>
       </Pressable>
     </View>

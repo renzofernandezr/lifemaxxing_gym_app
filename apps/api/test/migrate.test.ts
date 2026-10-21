@@ -25,3 +25,12 @@ describe("migraciones", () => {
     expect(readFileSync(SEED_PATH, "utf8")).toBe(seedSql());
   });
 });
+
+describe("textos del resumen", () => {
+  it("shortName conserva las preposiciones", async () => {
+    const { shortName } = await import("../src/services/workouts");
+    expect(shortName("Press inclinado con barra")).toBe("Press inclinado");
+    expect(shortName("Negativas de dominada supina")).toBe("Negativas de dominada");
+    expect(shortName("Jalón al pecho supino")).toBe("Jalón al pecho");
+  });
+});

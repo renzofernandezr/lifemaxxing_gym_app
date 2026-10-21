@@ -119,12 +119,28 @@ export async function sessionDTO(db: Db, s: SessionRow): Promise<WorkoutSessionD
   };
 }
 
-const shortName = (name: string) => name.split(" ").slice(0, 2).join(" ");
+const LINKS = new Set(["de", "del", "al", "a", "con", "en"]);
+/** Nombre corto para destacados: dos palabras con significado ("Press inclinado", "Negativas de dominada"). */
+export function shortName(name: string): string {
+  const out: string[] = [];
+  let meaningful = 0;
+  for (const w of name.split(" ")) {
+    out.push(w);
+    if (!LINKS.has(w.toLowerCase())) meaningful++;
+    if (meaningful >= 2) break;
+  }
+  return out.join(" ");
+}
 
 function nextText(ex: ResolvedExercise, next: number[], best: DoneSet | null): string {
   if (ex.scheme === "cardio") return `Próxima: ${Math.min(60, (best?.reps ?? 40) + 5)} min`;
   if (!ex.exercise.incrementKg) return "Próxima: busca una rep más por serie";
   if (!next.length) return "";
+  const eq = ex.exercise.equipment;
+  if (eq === "peso_corporal" || eq === "rueda") {
+    // Peso corporal: si no toca lastre, se progresa en reps; si toca, "PC + 2.5 kg".
+    return next.every((w) => w <= 0) ? "Próxima: busca una rep más por serie" : `Próxima: PC + ${fk(Math.max(...next))} kg`;
+  }
   if (ex.scheme === "rpt") return `Próxima: ${next.map(fk).join(" · ")} kg`;
   if (ex.scheme === "kino") return `Próxima: ${fk(next[0])} → ${fk(next[next.length - 1])} kg`;
   return `Próxima: ${fk(next[0])} kg`;
@@ -188,7 +204,7 @@ export async function buildSummary(db: Db, s: SessionRow, routine: RoutineDTO, f
           .slice(0, 2)
           .map((e) => {
             const heavy = e.sets.reduce((a, b) => (b.weightKg > a.weightKg ? b : a));
-            return `${shortName(e.name)} ${heavy.weightKg > 0 ? fk(heavy.weightKg) : "PC"} × ${heavy.reps}`;
+            return heavy.weightKg > 0 ? `${shortName(e.name)} ${fk(heavy.weightKg)} × ${heavy.reps}` : `${shortName(e.name)} × ${heavy.reps}`;
           })
           .join(" · ");
 

@@ -146,8 +146,8 @@ function Preview({ t, activeLocal }: { t: TodayResponse; activeLocal: string | n
               <T style={{ fontFamily: F.bold, fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: c.accentInk, opacity: isNext ? 1 : 0 }}>
                 {pos.routineKey ? "Hoy" : "Próxima"}
               </T>
-              <T style={{ fontFamily: F.bold, fontSize: cols ? 15 : 19, lineHeight: cols ? 18 : 22 }} numberOfLines={1}>
-                {r.name}
+              <T style={{ fontFamily: F.bold, fontSize: cols ? 15 : 19, lineHeight: cols ? 18 : 22 }} numberOfLines={2}>
+                {cols && r.key === "C" ? "Cardio" : r.name}
               </T>
               <T style={{ fontSize: 12, lineHeight: 15, color: c.muted }} numberOfLines={2}>
                 {r.focus}

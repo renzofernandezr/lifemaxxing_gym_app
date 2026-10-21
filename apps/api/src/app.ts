@@ -69,8 +69,12 @@ export function createApp(deps: Deps, opts: AppOptions = {}) {
       if (c.res.status === 200) c.header("Cache-Control", "public, max-age=31536000, immutable");
     });
     app.use("*", serveStatic({ root: dist }));
-    // Fallback SPA: cualquier ruta del router que no sea /api ni un archivo devuelve index.html.
+    // Fallback SPA: las rutas del router (sin extensión) devuelven index.html; un archivo que no existe, 404.
     app.get("*", (c) => {
+      const path = c.req.path;
+      if (path.startsWith("/_expo/") || path.startsWith("/assets/") || /\.[a-z0-9]{1,8}$/i.test(path)) {
+        return c.text("No encontrado", 404);
+      }
       c.header("Cache-Control", "no-cache");
       return c.html(indexHtml);
     });
