@@ -1,7 +1,8 @@
 // Pestaña Fuerza: levantamientos clave (serie pesada) y estándares Kinobody relativos al peso.
-import { dayNumber, fk, round, ROUTINES, STANDARDS, type LiftSeries } from "@lifemaxxing/core";
+import { dayNumber, fk, KEY_LIFTS, round, ROUTINES, STANDARDS, STRENGTH_GROUPS, type LiftSeries } from "@lifemaxxing/core";
 import { useState } from "react";
 import { View } from "react-native";
+import Svg, { Circle, Polyline } from "react-native-svg";
 import { LineChart } from "../../components/charts";
 import { Card, CardHead, Empty, ErrorBox, Grid, Loading, T, useLayout } from "../../components/ui";
 import { useLifts } from "../../lib/queries";
@@ -20,11 +21,14 @@ export function StrengthPane() {
       <View>
         <CardHead h="h2" title="Levantamientos clave" right="serie pesada · kg" />
         <Grid cols={isDesktop ? 3 : 1} gap={16}>
-          {lifts.map((s) => (
-            <LiftCard key={s.exerciseId} s={s} pullups={s.exerciseId === "jal" ? pullups : null} />
-          ))}
+          {lifts
+            .filter((s) => KEY_LIFTS.includes(s.exerciseId))
+            .map((s) => (
+              <LiftCard key={s.exerciseId} s={s} pullups={s.exerciseId === "jal" ? pullups : null} />
+            ))}
         </Grid>
       </View>
+      <AllExercisesCard lifts={lifts} />
       <StandardsCard lifts={lifts} bw={bodyWeightKg} pullups={pullups} />
     </>
   );
@@ -88,6 +92,91 @@ function LiftCard({ s, pullups }: { s: LiftSeries; pullups: number | null }) {
       <T v="small" muted num>
         {notes.join(" · ")}
       </T>
+    </Card>
+  );
+}
+
+// ── Todos los ejercicios ────────────────────────────────
+/** Mini gráfica de tendencia (sin ejes) para las filas compactas. */
+function MiniSpark({ ys, color }: { ys: number[]; color: string }) {
+  const W = 72;
+  const H = 28;
+  if (ys.length < 2) return <View style={{ width: W, height: H }} />;
+  const lo = Math.min(...ys);
+  const hi = Math.max(...ys);
+  const span = hi - lo || 1;
+  const pts = ys.map((y, i) => [2 + (i / (ys.length - 1)) * (W - 4), H - 3 - ((y - lo) / span) * (H - 6)] as const);
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <Svg width={W} height={H} aria-hidden>
+      <Polyline points={pts.map(([x, y]) => `${x},${y}`).join(" ")} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      <Circle cx={lx} cy={ly} r={3} fill={color} />
+    </Svg>
+  );
+}
+
+/** Mejora desde la primera sesión: en kg si el ejercicio lleva carga, en reps si es de peso corporal. */
+function progressOf(s: LiftSeries) {
+  const pts = s.points;
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  const weighted = pts.some((p) => p.weightKg > 0);
+  const ys = pts.map((p) => (weighted ? p.weightKg : p.reps));
+  const delta = pts.length >= 2 ? (weighted ? last.weightKg - first.weightKg : last.reps - first.reps) : null;
+  return { first, last, weighted, ys, delta };
+}
+
+function ExerciseRow({ s, first }: { s: LiftSeries; first: boolean }) {
+  const { c } = useTheme();
+  const { last, weighted, ys, delta } = progressOf(s);
+  const up = delta != null && delta > 0;
+  const deltaText = delta == null ? "1 sesión" : delta === 0 ? "igual" : `${signed(delta)} ${weighted ? "kg" : "reps"}`;
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${s.name}: última ${weighted ? `${fk(last.weightKg)} kg` : "peso corporal"} por ${last.reps}, ${deltaText} desde la primera sesión`}
+      style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}
+    >
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <T style={{ fontFamily: F.semibold, fontSize: 15 }} numberOfLines={1}>
+          {s.name}
+        </T>
+        <T v="small" muted num>
+          {weighted ? `${fk(last.weightKg)} kg` : "PC"} × {last.reps} · {s.points.length} {s.points.length === 1 ? "sesión" : "sesiones"}
+        </T>
+      </View>
+      <MiniSpark ys={ys} color={up ? c.accent : c.muted} />
+      <View style={{ minWidth: 70, alignItems: "flex-end" }}>
+        <T num style={{ fontFamily: F.bold, fontSize: 14, color: up ? c.good : c.muted }}>
+          {deltaText}
+        </T>
+      </View>
+    </View>
+  );
+}
+
+function AllExercisesCard({ lifts }: { lifts: LiftSeries[] }) {
+  const byId = new Map(lifts.filter((l) => l.points.length).map((l) => [l.exerciseId, l]));
+  const groups = STRENGTH_GROUPS.map((g) => ({ ...g, items: g.ids.map((id) => byId.get(id)).filter((x): x is LiftSeries => !!x) })).filter((g) => g.items.length);
+  return (
+    <Card>
+      <CardHead title="Todos los ejercicios" right="mejora desde tu primera sesión" />
+      {groups.length ? (
+        <View style={{ gap: 14 }}>
+          {groups.map((g) => (
+            <View key={g.key}>
+              <T v="eyebrow" style={{ marginBottom: 2 }}>
+                {g.name}
+              </T>
+              {g.items.map((s, i) => (
+                <ExerciseRow key={s.exerciseId} s={s} first={i === 0} />
+              ))}
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Empty title="Aún no hay ejercicios registrados" text="Termina tu primer entreno para ver la evolución de cada ejercicio." />
+      )}
     </Card>
   );
 }

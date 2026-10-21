@@ -13,6 +13,8 @@ import {
   DEFAULT_TIMEZONE,
   e1rm,
   EXERCISE_BY_ID,
+  KEY_LIFTS,
+  STRENGTH_IDS,
   fk,
   isRecord,
   localDate,
@@ -64,8 +66,6 @@ import { demoMode, type DemoMode } from "./demo";
 const TZ = DEFAULT_TIMEZONE;
 const KEYS: RoutineKey[] = ["A", "B", "C"];
 const LIFT_WEEKLY_GOAL = 3;
-const MAIN_LIFTS = ["inc", "ohp", "jal"];
-const ALT_LIFTS = ["chin_w", "inc_db", "dip_w", "bench", "jal_pr", "pull_w"];
 /** Ejercicios que pueden marcar récord en la demo (solo los básicos, para que sean pocos). */
 const RECORD_LIFTS = new Set(["inc", "ohp", "jal", "inc_db", "dip_w", "jal_pr"]);
 
@@ -427,7 +427,7 @@ function overview(w: World): OverviewResponse {
 
 function lifts(w: World): LiftsResponse {
   const series = new Map<string, LiftSeries>();
-  for (const id of [...MAIN_LIFTS, ...ALT_LIFTS]) series.set(id, { exerciseId: id, name: EXERCISE_BY_ID[id]?.name ?? id, points: [] });
+  for (const id of STRENGTH_IDS) series.set(id, { exerciseId: id, name: EXERCISE_BY_ID[id]?.name ?? id, points: [] });
   for (const s of w.sessions) {
     for (const e of s.summary.exercises) {
       const ser = series.get(e.exerciseId);
@@ -445,7 +445,7 @@ function lifts(w: World): LiftsResponse {
   }
   const last = w.checkins[w.checkins.length - 1];
   return {
-    lifts: [...series.values()].filter((s) => MAIN_LIFTS.includes(s.exerciseId) || s.points.length),
+    lifts: [...series.values()].filter((s) => KEY_LIFTS.includes(s.exerciseId) || s.points.length),
     bodyWeightKg: last?.weightKg ?? w.profile.startWeightKg,
     pullups: 3,
   };

@@ -3,11 +3,13 @@ import {
   bodyComp,
   clean,
   dayNumber,
+  KEY_LIFTS,
   e1rm,
   localDate,
   mondayOf,
   plannedSessionsUntil,
   programPosition,
+  STRENGTH_IDS,
   type ActivityResponse,
   type LiftSeries,
   type LiftsResponse,
@@ -21,8 +23,6 @@ import { getProfile } from "../services/user";
 import { toCheckin } from "./body";
 
 const LIFT_WEEKLY_GOAL = 3;
-const MAIN_LIFTS = ["inc", "ohp", "jal"];
-const ALT_LIFTS = ["chin_w", "inc_db", "dip_w", "bench", "jal_pr", "pull_w"];
 
 export const statsRoutes = new Hono<AppEnv>()
   .use(requireAuth)
@@ -111,7 +111,8 @@ export const statsRoutes = new Hono<AppEnv>()
     const { db } = c.get("deps");
     const userId = c.get("user").id;
     const profile = await getProfile(db, userId);
-    const ids = [...MAIN_LIFTS, ...ALT_LIFTS];
+    // Todos los ejercicios con carga o reps (Fuerza muestra la evolución de cada uno).
+    const ids = STRENGTH_IDS;
     const [sets, bw, catalog] = await Promise.all([
       db.query<{ exercise_id: string; session_id: string; date: string; weight_kg: number; reps: number }>(
         `select ws.exercise_id, ws.session_id, (s.started_at at time zone $3)::date::text as date, ws.weight_kg, ws.reps
@@ -144,7 +145,7 @@ export const statsRoutes = new Hono<AppEnv>()
       p.e1rmKg = Math.max(p.e1rmKg, est);
     }
     const res: LiftsResponse = {
-      lifts: [...series.values()].filter((s) => MAIN_LIFTS.includes(s.exerciseId) || s.points.length),
+      lifts: [...series.values()].filter((s) => KEY_LIFTS.includes(s.exerciseId) || s.points.length),
       bodyWeightKg: bw.rows[0]?.weight_kg ?? profile.startWeightKg,
       pullups,
     };

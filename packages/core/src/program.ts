@@ -195,3 +195,14 @@ export function resolveExercise(t: RoutineExerciseTemplate): ResolvedExercise {
 export function resolveRoutine(r: RoutineTemplate): ResolvedExercise[] {
   return r.exercises.map(resolveExercise);
 }
+
+/** Grupos de la pestaña Fuerza (todos los ejercicios con carga o reps; los de tiempo —cardio, puente— no). */
+export const STRENGTH_GROUPS: { key: string; name: string; ids: string[] }[] = [
+  { key: "basicos", name: "Básicos", ids: ["inc", "ohp", "jal", "inc_db", "dip_w", "bench", "jal_pr", "chin_w", "pull_w"] },
+  { key: "piernas", name: "Piernas", ids: ["bul", "rdl", "box", "sl_rdl", "hip_thrust"] },
+  { key: "accesorios", name: "Accesorios", ids: ["tri", "tri_oh", "ham", "curl_inc", "lat", "uprow", "rdf", "fp"] },
+  { key: "core", name: "Peso corporal y core", ids: ["neg", "knee", "hlr", "s2s", "whl"] },
+];
+export const STRENGTH_IDS: string[] = STRENGTH_GROUPS.flatMap((g) => g.ids);
+/** Los tres levantamientos clave (tarjetas grandes y estándares). */
+export const KEY_LIFTS = ["inc", "ohp", "jal"];

@@ -242,3 +242,12 @@ describe("correcciones de la revisión", () => {
     expect(checkinSchema.safeParse({ measuredOn: "2026-02-28", weightKg: 90 }).success).toBe(true);
   });
 });
+
+describe("grupos de Fuerza", () => {
+  it("incluyen todos los ejercicios menos los de tiempo, sin repetir", async () => {
+    const { STRENGTH_IDS } = await import("./program");
+    const expected = EXERCISES.map((e) => e.id).filter((id) => id !== "car" && id !== "brg").sort();
+    expect([...STRENGTH_IDS].sort()).toEqual(expected);
+    expect(new Set(STRENGTH_IDS).size).toBe(STRENGTH_IDS.length);
+  });
+});
