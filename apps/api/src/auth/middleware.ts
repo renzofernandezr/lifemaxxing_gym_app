@@ -1,4 +1,4 @@
-import { getCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv, Ctx } from "../context";
 import { ApiError } from "../errors";
@@ -62,5 +62,9 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   if (!user) throw new ApiError(401, "session_expired", "Tu sesión expiró. Vuelve a iniciar sesión");
   c.set("user", user);
   c.set("authVia", via);
+  // Expiración deslizante también en la web: al extender la sesión se renueva la cookie.
+  if (via === "cookie" && user.refreshed) {
+    setCookie(c, SESSION_COOKIE, token, { httpOnly: true, secure: config.isProd, sameSite: "Lax", path: "/", maxAge: config.sessionTtlDays * 86_400 });
+  }
   await next();
 });

@@ -71,9 +71,10 @@ function Live({ a }: { a: ActiveWorkout }) {
   const { width } = useLayout();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const idx = a.items[a.i] && !a.items[a.i].done && !a.items[a.i].skip ? a.i : Math.max(0, nextPending(a.items, a.i));
-  const it = a.items[idx];
-  const [draft, setDraft] = useState<Draft>(() => draftFor(it));
+  // -1 = no queda nada pendiente: se muestra "Completaste todas las series".
+  const idx = a.items[a.i] && !a.items[a.i].done && !a.items[a.i].skip ? a.i : nextPending(a.items, a.i);
+  const it = idx >= 0 ? a.items[idx] : undefined;
+  const [draft, setDraft] = useState<Draft>(() => (it ? draftFor(it) : { key: "", w: "0", r: "0" }));
   const [busy, setBusy] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -202,10 +203,13 @@ function Live({ a }: { a: ActiveWorkout }) {
           disabled={busy}
           onPress={async () => {
             try {
-              await discardWorkout(a.sessionId);
+              const r = await discardWorkout(a.sessionId, { onlyInProgress: true });
               setConfirmEnd(false);
-              toast("Sesión descartada", "info");
-              router.dismissTo("/entrenar");
+              if (r === "finished") toast("Ese entreno ya estaba terminado: quedó en tu historial", "info");
+              else {
+                toast("Sesión descartada", "info");
+                router.dismissTo("/entrenar");
+              }
             } catch (err) {
               setFinishError((err as Error).message);
             }

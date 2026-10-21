@@ -26,6 +26,9 @@ export const setUnauthorizedHandler = (fn: (() => void) | null) => {
   onUnauthorized = fn;
 };
 
+/** Sin respuesta en este tiempo, la petición se corta y se trata como "sin conexión" (Android no tiene timeout). */
+const TIMEOUT_MS = 15_000;
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const method = init.method ?? "GET";
   if (isDemo()) return demoRequest<T>(method, path, init.body);
@@ -36,19 +39,27 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     const token = await getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const onAbort = () => ctrl.abort();
+  init.signal?.addEventListener("abort", onAbort);
   let res: Response;
+  let text: string;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method,
       headers,
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
       credentials: "include",
-      signal: init.signal,
+      signal: ctrl.signal,
     });
+    text = await res.text();
   } catch {
     throw new ApiError(0, "network", "Sin conexión. Lo intentaremos de nuevo");
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener("abort", onAbort);
   }
-  const text = await res.text();
   let data: unknown = null;
   if (text) {
     try {

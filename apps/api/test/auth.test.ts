@@ -105,6 +105,19 @@ describe("límite de intentos", () => {
   });
 });
 
+describe("expiración deslizante", () => {
+  it("la web recibe la cookie renovada cuando se extiende la sesión", async () => {
+    const r = await client(app).req("POST", "/api/auth/login", { email: ALLOWED[0], password: PASSWORD });
+    const cookie = r.headers.get("set-cookie")!.split(";")[0];
+    const fresh = await client(app, { cookie }).req("GET", "/api/auth/me");
+    expect(fresh.headers.get("set-cookie")).toBeNull();
+    await testDb().query("update sessions set last_seen_at = now() - interval '2 hours' where user_id = (select id from users where email = $1)", [ALLOWED[0]]);
+    const later = await client(app, { cookie }).req("GET", "/api/auth/me");
+    expect(later.status).toBe(200);
+    expect(later.headers.get("set-cookie")).toMatch(/sid=/);
+  });
+});
+
 describe("sesión expirada", () => {
   it("→ 401 session_expired", async () => {
     const u = await mobileUser(app, ALLOWED[1], "Otro");

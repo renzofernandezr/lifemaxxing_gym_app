@@ -80,7 +80,7 @@ async function cancel(id: string | null | undefined) {
   if (IS_NATIVE && id) await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
 }
 
-export async function startRest(seconds: number, title: string, next: string | null, info: string | null = null) {
+async function doStartRest(seconds: number, title: string, next: string | null, info: string | null = null) {
   const prev = useWorkout.getState().rest;
   await cancel(prev?.notificationId);
   const endAt = Date.now() + seconds * 1000;
@@ -92,7 +92,7 @@ export async function startRest(seconds: number, title: string, next: string | n
   else await cancel(id);
 }
 
-export async function adjustRest(deltaSec: number) {
+async function doAdjustRest(deltaSec: number) {
   const r = useWorkout.getState().rest;
   if (!r) return;
   const now = Date.now();
@@ -107,7 +107,7 @@ export async function adjustRest(deltaSec: number) {
   else await cancel(id);
 }
 
-export async function skipRest() {
+async function doSkipRest() {
   const r = useWorkout.getState().rest;
   useWorkout.getState().setRest(null);
   await cancel(r?.notificationId);
@@ -117,3 +117,17 @@ export function setRestExpanded(expanded: boolean) {
   const r = useWorkout.getState().rest;
   if (r) useWorkout.getState().setRest({ ...r, expanded });
 }
+
+// Las operaciones del descanso se ejecutan de una en una: dos toques rápidos en "+30 s" suman 60 s
+// y nunca queda una notificación programada huérfana.
+let chain: Promise<unknown> = Promise.resolve();
+function serial<T>(fn: () => Promise<T>): Promise<T> {
+  const p = chain.then(fn, fn);
+  chain = p.catch(() => {});
+  return p;
+}
+
+export const startRest = (seconds: number, title: string, next: string | null, info: string | null = null) =>
+  serial(() => doStartRest(seconds, title, next, info));
+export const adjustRest = (deltaSec: number) => serial(() => doAdjustRest(deltaSec));
+export const skipRest = () => serial(() => doSkipRest());

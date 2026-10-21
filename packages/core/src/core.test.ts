@@ -223,3 +223,22 @@ describe("datos del programa", () => {
     expect(fk(57.4999999)).toBe("57.5");
   });
 });
+
+describe("correcciones de la revisión", () => {
+  it("peso corporal: las series siguientes nunca suben (piso 0)", () => {
+    const dip = get(2, "A", "dip_w");
+    expect(calibrate(dip, { weightKg: 0, reps: 8, rir: 1 }).loads).toEqual([0, 0, 0]);
+    expect(propagateWeightChange("rpt", dip, [5, 2.5, 2.5], 0, 0)).toEqual([0, 0, 0]);
+    // Con lastre sigue bajando 10 %
+    expect(calibrate(dip, { weightKg: 20, reps: 8, rir: 1 }).loads.every((w, i, a) => i === 0 || w <= a[i - 1])).toBe(true);
+  });
+  it("una fecha de inicio que no es lunes cuenta desde su lunes", () => {
+    expect(programPosition("2026-10-23", "2026-10-21").routineKey).toBe("A");
+    expect(programPosition("2026-10-26", "2026-10-21")).toMatchObject({ week: 2, routineKey: "B" });
+  });
+  it("fechas imposibles no pasan la validación", async () => {
+    const { checkinSchema } = await import("./schemas");
+    expect(checkinSchema.safeParse({ measuredOn: "2026-02-30", weightKg: 90 }).success).toBe(false);
+    expect(checkinSchema.safeParse({ measuredOn: "2026-02-28", weightKg: 90 }).success).toBe(true);
+  });
+});

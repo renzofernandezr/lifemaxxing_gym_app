@@ -47,6 +47,8 @@ interface WorkoutState {
   setRest: (r: RestState | null) => void;
   enqueue: (op: PendingOp) => void;
   dropOps: (ids: string[]) => void;
+  /** Quita exactamente esta operación (por identidad): si se fusionaron series nuevas en ella, es otro objeto y se conserva. */
+  removeOp: (op: PendingOp) => void;
   setSummary: (s: SessionSummary | null) => void;
   reset: () => void;
 }
@@ -73,6 +75,7 @@ export const useWorkout = create<WorkoutState>()(
           return { queue: [...s.queue, op] };
         }),
       dropOps: (ids) => set((s) => ({ queue: s.queue.filter((x) => !ids.includes(x.id)) })),
+      removeOp: (op) => set((s) => ({ queue: s.queue.filter((x) => x !== op) })),
       setSummary: (lastSummary) => set({ lastSummary }),
       reset: () => set({ active: null, rest: null, queue: [] }),
     }),

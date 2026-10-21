@@ -27,4 +27,4 @@ COPY --from=build /app/apps/mobile/dist ./web
 COPY db/migrations ./db/migrations
 EXPOSE 3000
 # Las migraciones corren antes de arrancar (advisory lock: dos deploys no migran a la vez).
-CMD ["sh", "-c", "node dist/db/migrate.js && node dist/server.js"]
+CMD ["sh", "-c", "node dist/db/migrate.js && exec node dist/server.js"]

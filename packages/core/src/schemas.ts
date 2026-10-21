@@ -1,7 +1,14 @@
 // Esquemas zod compartidos por la app y la API.
 import { z } from "zod";
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida (AAAA-MM-DD)");
+/** Fecha real AAAA-MM-DD (rechaza 2026-02-30). */
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida (AAAA-MM-DD)")
+  .refine((s) => {
+    const d = new Date(`${s}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+  }, "Fecha inválida (AAAA-MM-DD)");
 
 export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email("Correo inválido").max(200),

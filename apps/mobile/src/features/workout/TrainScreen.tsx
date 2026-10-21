@@ -80,9 +80,9 @@ function Preview({ t, activeLocal }: { t: TodayResponse; activeLocal: string | n
   const discard = async (id: string) => {
     setBusy(true);
     try {
-      await discardWorkout(id);
+      const r = await discardWorkout(id, { onlyInProgress: true });
       setConflict(null);
-      toast("Sesión descartada", "info");
+      toast(r === "finished" ? "Ese entreno ya estaba terminado: quedó en tu historial" : "Sesión descartada", "info");
     } catch (err) {
       toast((err as Error).message, "error");
     } finally {

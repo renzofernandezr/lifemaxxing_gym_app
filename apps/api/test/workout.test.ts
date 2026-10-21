@@ -195,6 +195,23 @@ describe("entreno completo (Workout A)", () => {
     expect(otroOv.json.weight).toBeNull();
   });
 
+  it("discard con onlyInProgress no borra una sesión ya terminada", async () => {
+    const id = (await renzo.req("GET", "/api/sessions")).json.items[0].id;
+    const r = await renzo.req("POST", `/api/sessions/${id}/discard`, { onlyInProgress: true });
+    expect(r.status).toBe(409);
+    expect(r.json.error.code).toBe("session_closed");
+  });
+
+  it("una calibración de una sesión descartada no cuenta", async () => {
+    const routineB = (await renzo.req("GET", "/api/program/routines?phase=1")).json.routines[1];
+    const s = await renzo.req("POST", "/api/sessions", { routineId: routineB.id });
+    expect((await renzo.req("POST", `/api/sessions/${s.json.id}/calibrations`, { exerciseId: "jal", weightKg: 60, reps: 16, rir: 0 })).status).toBe(201);
+    expect((await renzo.req("POST", `/api/sessions/${s.json.id}/discard`, { onlyInProgress: true })).status).toBe(200);
+    const t: TodayResponse = (await renzo.req("GET", "/api/program/today?date=2026-10-21")).json;
+    const jal = t.routines.find((r) => r.key === "B")!.exercises.find((e) => e.exerciseId === "jal")!;
+    expect(t.suggestions[jal.id].status).toBe("needs_calibration");
+  });
+
   it("discard de una sesión terminada la saca del historial", async () => {
     const hist = await renzo.req("GET", "/api/sessions");
     const last = hist.json.items[0].id;

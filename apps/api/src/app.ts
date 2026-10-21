@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
@@ -68,6 +68,13 @@ export function createApp(deps: Deps, opts: AppOptions = {}) {
       await next();
       if (c.res.status === 200) c.header("Cache-Control", "public, max-age=31536000, immutable");
     });
+    // index.html nunca se cachea: tras un deploy debe apuntar a los bundles nuevos.
+    const serveIndex = (c: Context<AppEnv>) => {
+      c.header("Cache-Control", "no-cache");
+      return c.html(indexHtml);
+    };
+    app.get("/", serveIndex);
+    app.get("/index.html", serveIndex);
     app.use("*", serveStatic({ root: dist }));
     // Fallback SPA: las rutas del router (sin extensión) devuelven index.html; un archivo que no existe, 404.
     app.get("*", (c) => {

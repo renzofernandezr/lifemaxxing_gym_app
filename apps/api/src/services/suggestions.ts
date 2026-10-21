@@ -58,9 +58,11 @@ export async function loadHistory(db: Db, userId: string, exerciseIds: string[],
       [userId, ids, exclude],
     ),
     db.query<CalRow>(
-      `select distinct on (exercise_id) exercise_id, e1rm_kg, created_at
-         from exercise_calibrations where user_id = $1 and exercise_id = any($2)
-        order by exercise_id, created_at desc`,
+      // Las calibraciones de sesiones descartadas no cuentan (p. ej. una prueba mal tipeada).
+      `select distinct on (c.exercise_id) c.exercise_id, c.e1rm_kg, c.created_at
+         from exercise_calibrations c left join workout_sessions s on s.id = c.session_id
+        where c.user_id = $1 and c.exercise_id = any($2) and s.status is distinct from 'discarded'
+        order by c.exercise_id, c.created_at desc`,
       [userId, ids],
     ),
   ]);

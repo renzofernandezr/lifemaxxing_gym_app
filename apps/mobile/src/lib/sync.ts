@@ -37,7 +37,8 @@ export function flushQueue(): Promise<boolean> {
       }
       try {
         await send(op);
-        useWorkout.getState().dropOps([op.id]);
+        // Por identidad: si mientras se enviaba se fusionaron series nuevas, la entrada es otro objeto y se reenvía.
+        useWorkout.getState().removeOp(op);
       } catch (err) {
         const e = err instanceof ApiError ? err : new ApiError(0, "network", "Sin conexión");
         if (e.isNetwork || e.status >= 500 || e.status === 429) {
@@ -46,7 +47,7 @@ export function flushQueue(): Promise<boolean> {
         }
         if (e.status === 401) return false; // el AuthProvider manda a login; la cola se conserva
         // Error definitivo (sesión cerrada, datos inválidos…): se descarta para no bloquear la cola.
-        useWorkout.getState().dropOps([op.id]);
+        useWorkout.getState().removeOp(op);
         onDrop?.(e.message);
       }
     }

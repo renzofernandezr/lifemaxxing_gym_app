@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { LoginResponse, MeResponse } from "@lifemaxxing/core";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTheme } from "../theme/theme";
@@ -8,6 +9,18 @@ import { qk, queryClient } from "./queries";
 import { getToken, setToken } from "./token";
 
 type Status = "loading" | "signedIn" | "signedOut";
+
+// Copia local del usuario: permite abrir la app sin red (o con la API caída) y seguir un entreno.
+const ME_KEY = "lmx-me";
+const saveMe = (m: MeResponse | null) => (m ? AsyncStorage.setItem(ME_KEY, JSON.stringify(m)) : AsyncStorage.removeItem(ME_KEY)).catch(() => {});
+async function loadMe(): Promise<MeResponse | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ME_KEY);
+    return raw ? (JSON.parse(raw) as MeResponse) : null;
+  } catch {
+    return null;
+  }
+}
 
 interface AuthValue {
   status: Status;
@@ -27,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const accept = useCallback(
     (m: MeResponse) => {
       queryClient.setQueryData(qk.me, m);
+      if (!isDemo()) saveMe(m);
       setMe(m);
       setPref(m.profile.theme);
       setStatus("signedIn");
@@ -36,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOutLocal = useCallback(async () => {
     await setToken(null);
+    await saveMe(null);
     queryClient.clear();
     setMe(null);
     setStatus("signedOut");
@@ -58,10 +73,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         accept(await api<MeResponse>("/api/auth/me"));
       } catch (err) {
-        if (err instanceof ApiError && err.isNetwork) {
-          // Sin red: si hay datos en caché seguimos dentro; si no, a login.
-          const cached = queryClient.getQueryData<MeResponse>(qk.me);
-          if (cached) return accept(cached);
+        // Solo un 401 cierra la sesión. Sin red o con la API caída se sigue con la copia local.
+        if (!(err instanceof ApiError && err.status === 401)) {
+          const cached = queryClient.getQueryData<MeResponse>(qk.me) ?? (await loadMe());
+          if (cached) {
+            queryClient.setQueryData(qk.me, cached);
+            setMe(cached);
+            setPref(cached.profile.theme);
+            setStatus("signedIn");
+            return;
+          }
         }
         setStatus("signedOut");
       }
@@ -72,7 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       queryClient.getQueryCache().subscribe((e) => {
-        if (e.query.queryKey[0] === "me" && e.type === "updated" && e.query.state.data) setMe(e.query.state.data as MeResponse);
+        if (e.query.queryKey[0] === "me" && e.type === "updated" && e.query.state.data) {
+          setMe(e.query.state.data as MeResponse);
+          if (!isDemo()) saveMe(e.query.state.data as MeResponse);
+        }
       }),
     [],
   );

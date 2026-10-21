@@ -1,5 +1,6 @@
 // Acciones del modo Entrenar: empezar, registrar series, cambiar de ejercicio, terminar y descartar.
 import {
+  calibrate,
   fk,
   localDate,
   SCHEME_NAME,
@@ -160,9 +161,20 @@ export function editDoneSet(idx: number, w: number, r: number) {
   const a = st().active;
   const it = a?.items[idx];
   if (!a || !it?.done) return;
-  const items = a.items.map((x, i) => (i === idx ? { ...x, done: { ...x.done!, w, r } } : x));
-  st().patchActive({ items });
+  let items = a.items.map((x, i) => (i === idx ? { ...x, done: { ...x.done!, w, r } } : x));
   st().enqueue({ id: uid(), type: "sets", sessionId: a.sessionId, sets: [toSetInput(items[idx])] });
+  if (it.kind === "test") {
+    // Corregir la serie de prueba recalcula el 1RM y las cargas de las series que faltan.
+    const re = a.routine.exercises[it.ei];
+    const ex = resolveRe(re, !!a.useAlt[re.id]);
+    const rir = it.done.rir ?? a.rir;
+    const cal = calibrate(ex, { weightKg: w, reps: r, rir });
+    items = items.map((x) =>
+      x.ei === it.ei && x.kind === "work" && !x.done ? { ...x, w: cal.loads[x.k] ?? x.w, r: x.lo, cal: cal.e1rmKg, pending: false } : x,
+    );
+    st().enqueue({ id: uid(), type: "calibration", sessionId: a.sessionId, body: { exerciseId: ex.exerciseId, weightKg: w, reps: r, rir } });
+  }
+  st().patchActive({ items });
   flushQueue();
 }
 
@@ -222,29 +234,72 @@ export function switchAlternative(ei: number, alt: boolean) {
 export class SyncPending extends Error {}
 
 /** Sincroniza todo y cierra la sesión en la API. */
-export async function finishWorkout(): Promise<SessionSummary> {
-  const a = st().active;
-  if (!a) throw new Error("No hay sesión en curso");
-  const ok = await flushQueue();
-  if (!ok) throw new SyncPending("Hay series sin sincronizar. Revisa tu conexión e inténtalo de nuevo");
-  const summary = await api<SessionSummary>(`/api/sessions/${a.sessionId}/finish`, { method: "POST" });
-  await skipRest();
-  st().setSummary(summary);
-  st().setActive(null);
-  invalidateTraining();
-  router.replace("/entrenar/resumen");
-  return summary;
+/** Si la sesión ya terminó en el servidor (respuesta perdida u otro dispositivo), trae su resumen guardado. */
+async function serverOutcome(sessionId: string): Promise<{ status: WorkoutSessionDTO["status"]; summary: SessionSummary | null }> {
+  const r = await api<{ session: WorkoutSessionDTO; summary: SessionSummary | null }>(`/api/sessions/${sessionId}`);
+  return { status: r.session.status, summary: r.summary };
 }
 
-/** Descarta la sesión (en curso o recién terminada). */
-export async function discardWorkout(sessionId: string) {
-  await api(`/api/sessions/${sessionId}/discard`, { method: "POST" });
+async function clearLocal(sessionId: string) {
   const s = st();
   if (s.active?.sessionId === sessionId) {
     await skipRest();
     s.setActive(null);
     s.dropOps(s.queue.filter((q) => q.sessionId === sessionId).map((q) => q.id));
   }
+}
+
+function showSummary(summary: SessionSummary) {
+  st().setSummary(summary);
+  invalidateTraining();
+  router.replace("/entrenar/resumen");
+}
+
+/** Sincroniza todo y cierra la sesión en la API. */
+export async function finishWorkout(): Promise<SessionSummary> {
+  const a = st().active;
+  if (!a) throw new Error("No hay sesión en curso");
+  const ok = await flushQueue();
+  if (!ok) throw new SyncPending("Hay series sin sincronizar. Revisa tu conexión e inténtalo de nuevo");
+  let summary: SessionSummary;
+  try {
+    summary = await api<SessionSummary>(`/api/sessions/${a.sessionId}/finish`, { method: "POST" });
+  } catch (err) {
+    if (!(err instanceof ApiError && err.code === "session_closed")) throw err;
+    const out = await serverOutcome(a.sessionId);
+    await clearLocal(a.sessionId);
+    if (out.status !== "finished" || !out.summary) {
+      invalidateTraining();
+      router.dismissTo("/entrenar");
+      throw new Error("Esta sesión se descartó en otro dispositivo");
+    }
+    summary = out.summary;
+  }
+  await clearLocal(a.sessionId);
+  showSummary(summary);
+  return summary;
+}
+
+/**
+ * Descarta la sesión. Desde una sesión en curso (`onlyInProgress`) el servidor no borra un entreno que ya terminó:
+ * en ese caso se muestra su resumen y devuelve "finished".
+ */
+export async function discardWorkout(sessionId: string, opts: { onlyInProgress?: boolean } = {}): Promise<"discarded" | "finished"> {
+  try {
+    await api(`/api/sessions/${sessionId}/discard`, { method: "POST", body: { onlyInProgress: !!opts.onlyInProgress } });
+  } catch (err) {
+    if (opts.onlyInProgress && err instanceof ApiError && err.code === "session_closed") {
+      const out = await serverOutcome(sessionId);
+      await clearLocal(sessionId);
+      if (out.summary) showSummary(out.summary);
+      else invalidateTraining();
+      return "finished";
+    }
+    throw err;
+  }
+  await clearLocal(sessionId);
+  const s = st();
   if (s.lastSummary?.sessionId === sessionId) s.setSummary(null);
   invalidateTraining();
+  return "discarded";
 }

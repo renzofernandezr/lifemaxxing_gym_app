@@ -6,6 +6,8 @@ export interface AuthUser {
   email: string;
   name: string;
   sessionId: string;
+  /** Se extendió la expiración en esta petición (la web renueva la cookie). */
+  refreshed: boolean;
 }
 
 export async function createSession(db: Db, userId: string, ttlDays: number, userAgent: string | null): Promise<string> {
@@ -34,7 +36,7 @@ export async function findSession(db: Db, token: string, ttlDays: number): Promi
       [r.session_id, ttlDays],
     );
   }
-  return { id: r.id, email: r.email, name: r.name, sessionId: r.session_id };
+  return { id: r.id, email: r.email, name: r.name, sessionId: r.session_id, refreshed: r.stale };
 }
 
 export async function deleteSession(db: Db, sessionId: string): Promise<void> {

@@ -78,7 +78,8 @@ export function programPosition(
   timeZone: string = DEFAULT_TIMEZONE,
 ): ProgramPosition {
   const iso = typeof date === "string" ? date.slice(0, 10) : localDate(date, timeZone);
-  const diff = dayNumber(iso) - dayNumber(startDate);
+  // La semana 1 empieza el lunes de la fecha de inicio (aunque se haya guardado otro día).
+  const diff = dayNumber(iso) - dayNumber(mondayOf(startDate));
   const week = Math.floor(diff / 7) + 1;
   const dow = weekday(iso);
   const phase = phaseForWeek(week);
@@ -112,7 +113,7 @@ export function nextSession(
 
 /** Sesiones planificadas entre el inicio y una fecha (inclusive), sin pasar de la semana 24. */
 export function plannedSessionsUntil(date: string, startDate: string = DEFAULT_PROGRAM_START): number {
-  const start = dayNumber(startDate);
+  const start = dayNumber(mondayOf(startDate));
   const end = Math.min(dayNumber(date), start + PROGRAM_WEEKS * 7 - 1);
   let n = 0;
   for (let d = start; d <= end; d++) {

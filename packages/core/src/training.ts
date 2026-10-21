@@ -26,6 +26,11 @@ export function round(weightKg: number, step: number): number {
   return clean(Math.round(weightKg / step + EPS) * step);
 }
 
+/** Peso mínimo de una serie: 0 en peso corporal (sin lastre), un paso en el resto. */
+export function minLoad(ex: { equipment: Equipment; incrementKg?: number | null }): number {
+  return ex.equipment === "peso_corporal" || ex.equipment === "rueda" ? 0 : stepOf(ex);
+}
+
 /** Paso de carga: el incremento del ejercicio o, si no tiene, 2 kg en mancuernas y 2.5 kg en el resto. */
 export function stepOf(ex: { equipment: Equipment; incrementKg?: number | null }): number {
   if (ex.incrementKg && ex.incrementKg > 0) return ex.incrementKg;
@@ -40,6 +45,7 @@ export function stepOf(ex: { equipment: Equipment; incrementKg?: number | null }
  */
 export function loadsFromE1rm(ex: ResolvedExercise, e1rmKg: number): number[] {
   const st = stepOf(ex.exercise);
+  const floor = minLoad(ex.exercise);
   const sets = ex.sets;
   const n = sets.length;
   if (n === 0) return [];
@@ -50,7 +56,7 @@ export function loadsFromE1rm(ex: ResolvedExercise, e1rmKg: number): number[] {
     const out = new Array<number>(n);
     out[n - 1] = top;
     for (let k = n - 2; k >= 0; k--) {
-      out[k] = Math.max(st, Math.min(clean(out[k + 1] - st), round(top * ramp[k], st)));
+      out[k] = Math.max(floor, Math.min(clean(out[k + 1] - st), round(top * ramp[k], st)));
     }
     return out;
   }
@@ -59,7 +65,8 @@ export function loadsFromE1rm(ex: ResolvedExercise, e1rmKg: number): number[] {
   const out: number[] = [first];
   for (let k = 1; k < n; k++) {
     const prev = out[k - 1];
-    out.push(Math.max(st, ex.dropKg ? clean(prev - ex.dropKg) : round(prev * 0.9, st)));
+    // Nunca más pesada que la anterior (con peso corporal el piso es 0, no un paso).
+    out.push(Math.min(prev, Math.max(floor, ex.dropKg ? clean(prev - ex.dropKg) : round(prev * 0.9, st))));
   }
   return out;
 }
@@ -171,9 +178,10 @@ export function propagateWeightChange(
   out[changedIndex] = newWeight;
   if (newWeight === old) return out;
   const st = stepOf(ex.exercise);
+  const floor = minLoad(ex.exercise);
   if (scheme === "rpt") {
     for (let k = changedIndex + 1; k < out.length; k++) {
-      out[k] = Math.max(st, ex.dropKg ? clean(out[k - 1] - ex.dropKg) : round(out[k - 1] * 0.9, st));
+      out[k] = Math.min(out[k - 1], Math.max(floor, ex.dropKg ? clean(out[k - 1] - ex.dropKg) : round(out[k - 1] * 0.9, st)));
     }
   } else if (scheme === "kino") {
     const d = newWeight - old;

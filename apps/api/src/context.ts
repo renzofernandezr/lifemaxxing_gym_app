@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import type { Context } from "hono";
 import type { z } from "zod";
 import type { AuthUser } from "./auth/sessions";
@@ -46,7 +47,8 @@ export function clientIp(c: Ctx): string | null {
   const real = c.req.header("x-real-ip")?.trim();
   const fwd = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = real || fwd;
-  if (ip && /^[0-9a-fA-F:.]+$/.test(ip)) return ip;
+  if (ip && isIP(ip)) return ip;
   const env = c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined;
-  return env?.incoming?.socket?.remoteAddress ?? null;
+  const remote = env?.incoming?.socket?.remoteAddress;
+  return remote && isIP(remote) ? remote : null;
 }

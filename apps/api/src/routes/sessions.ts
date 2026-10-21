@@ -173,6 +173,12 @@ export const sessionRoutes = new Hono<AppEnv>()
     const { db } = c.get("deps");
     const s = await getSessionRow(db, c.get("user").id, c.req.param("id"));
     if (s.status === "discarded") return c.json({ ok: true });
+    // Desde una sesión en curso se pide { onlyInProgress: true }: si ya terminó (respuesta perdida o
+    // terminada en otro dispositivo) no se borra el entreno.
+    const raw = await c.req.json().catch(() => null);
+    if (s.status === "finished" && (raw as { onlyInProgress?: boolean } | null)?.onlyInProgress) {
+      throw new ApiError(409, "session_closed", "Esta sesión ya terminó");
+    }
     await db.query("update workout_sessions set status = 'discarded', finished_at = coalesce(finished_at, now()) where id = $1", [s.id]);
     return c.json({ ok: true });
   });
