@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/dist
+**/.expo
+.env
+.env.*
+apps/mobile/.env*
+.secrets
+docs/capturas
+*.log
