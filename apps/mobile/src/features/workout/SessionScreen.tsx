@@ -3,19 +3,20 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { IconChevron } from "../../components/icons";
-import { RestBar, RestScreen } from "../../components/rest";
+import { IconCheck, IconChevron } from "../../components/icons";
+import { RestBar, RestScreen, Spotlight } from "../../components/rest";
 import { Sheet } from "../../components/sheet";
 import { useToast } from "../../components/toast";
 import { Button, Loading, T } from "../../components/ui";
 import { ApiError } from "../../lib/api";
+import { tap } from "../../lib/haptics";
 import { useWorkout, useWorkoutHydrated, type ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
 import { F } from "../../theme/tokens";
 import { discardWorkout, editDoneSet, finishWorkout, logSet, SessionGone, SyncPending, unskipAll } from "./actions";
 import { draftFor, parseNum, type Draft } from "./draft";
 import { nextPending, progress } from "./logic";
-import { Dock, ExerciseHeader, ExerciseStrip, SetList } from "./SessionParts";
+import { ExercisesSheet, ExerciseProgress, Pill as FocusPill, SetDots, SetFocus, SkipPill, TechniqueSheet } from "./Focus";
 
 const close = () => (router.canGoBack() ? router.back() : router.replace("/entrenar"));
 
@@ -79,6 +80,7 @@ function Live({ a }: { a: ActiveWorkout }) {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const queue = useWorkout((s) => s.queue.length);
+  const [sheet, setSheet] = useState<"exercises" | "technique" | null>(null);
 
   // Al cambiar de serie (o al elegir una para corregir), el panel toma sus valores.
   useEffect(() => {
@@ -199,79 +201,91 @@ function Live({ a }: { a: ActiveWorkout }) {
 
   const p = progress(a.items);
   const view = { ...a, i: idx };
+  const cta = editing !== null ? "Guardar" : it.kind === "test" ? "Calcular mis cargas" : "Hecho";
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={{ backgroundColor: c.hdr, borderBottomWidth: 1, borderBottomColor: c.line, paddingTop: insets.top }}>
-        <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8, gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <Spotlight />
+      <View style={{ paddingTop: insets.top }}>
+        <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: 16, paddingTop: 6, gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Pressable
-              onPress={close}
+              onPress={() => {
+                tap();
+                close();
+              }}
               accessibilityRole="button"
               accessibilityLabel="Minimizar la sesión"
               hitSlop={10}
-              style={{ padding: 4 }}
+              style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: c.surface2 }}
             >
-              <IconChevron dir="down" color={c.fg} size={22} />
+              <IconChevron dir="down" color={c.fg} size={20} />
             </Pressable>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <T style={{ fontFamily: F.bold, fontSize: 17, lineHeight: 21 }} numberOfLines={1}>
+            <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
+              <T style={{ fontFamily: F.bold, fontSize: 16 }} numberOfLines={1}>
                 {a.routine.name}
               </T>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flexDirection: "row", gap: 6 }}>
                 <Clock startedAt={a.startedAt} />
-                <T v="small" muted num>
-                  · {p.done}/{p.total} series
-                </T>
-                {queue ? (
-                  <T v="small" color={c.accentInk}>
-                    · {queue} por sincronizar
-                  </T>
-                ) : null}
+                {queue ? <T v="small" color={c.accentInk}>· {queue} sin sincronizar</T> : null}
               </View>
             </View>
-            <Button small title="Terminar" onPress={() => setConfirmEnd(true)} />
+            <Pressable
+              onPress={() => {
+                tap();
+                setConfirmEnd(true);
+              }}
+              accessibilityRole="button"
+              hitSlop={10}
+              style={{ height: 40, paddingHorizontal: 14, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: c.surface2 }}
+            >
+              <T style={{ fontFamily: F.semibold, fontSize: 14 }}>Terminar</T>
+            </Pressable>
           </View>
-          <View
-            style={{ height: 4, backgroundColor: c.surface2, borderRadius: 2, overflow: "hidden" }}
-            accessibilityRole="progressbar"
-            accessibilityValue={{ min: 0, max: p.total, now: p.done }}
-          >
-            <View style={{ height: 4, width: `${p.pct * 100}%`, backgroundColor: c.accent }} />
-          </View>
+          <ExerciseProgress a={view} curEi={cur.ei} onOpen={() => setSheet("exercises")} />
         </View>
       </View>
 
-      <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
-        <ExerciseStrip a={view} curEi={cur.ei} />
-      </View>
-
-      <ScrollView
-        style={{ flex: 1 }}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
-      >
-        <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 12 }}>
-          <ExerciseHeader a={view} it={cur} />
-          <SetList a={view} curIdx={idx} selIdx={editing} draft={draft} onSelectDone={setSel} onLog={onLog} />
+      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
+        <View style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
+          <SetFocus a={view} it={it} editing={editing !== null} draft={draft} setDraft={setDraft} />
         </View>
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 12, paddingBottom: 8, alignItems: "center" }}>
-        <RestBar inline />
+      <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 12, paddingTop: 4 }}>
+        <View style={{ width: "100%", maxWidth: 520, alignSelf: "center", gap: 14 }}>
+          <RestBar inline />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {editing !== null ? <Button title="Cancelar" onPress={() => setSel(null)} style={{ flex: 1, minHeight: 64, borderRadius: 20 }} /> : null}
+            <Button
+              variant="primary"
+              title={cta}
+              loading={busy}
+              onPress={editing !== null ? onSaveEdit : onLog}
+              icon={editing === null && it.kind !== "test" ? <IconCheck color={c.onAccent} size={24} /> : undefined}
+              style={{
+                flex: 2,
+                minHeight: 64,
+                borderRadius: 20,
+                shadowColor: c.accent,
+                shadowOpacity: 0.35,
+                shadowRadius: 14,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 6,
+              }}
+            />
+          </View>
+          <SetDots a={view} curIdx={idx} selIdx={editing} onSelectDone={setSel} />
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <FocusPill title="Ejercicios" onPress={() => setSheet("exercises")} />
+            <FocusPill title="Técnica" onPress={() => setSheet("technique")} />
+            <SkipPill />
+          </View>
+        </View>
       </View>
-      <Dock
-        a={view}
-        it={it}
-        editing={editing !== null}
-        draft={draft}
-        setDraft={setDraft}
-        onLog={onLog}
-        onSaveEdit={onSaveEdit}
-        onCancelEdit={() => setSel(null)}
-        busy={busy}
-        bottomInset={insets.bottom}
-      />
+
+      <ExercisesSheet a={view} curEi={cur.ei} open={sheet === "exercises"} onClose={() => setSheet(null)} />
+      <TechniqueSheet a={view} it={cur} open={sheet === "technique"} onClose={() => setSheet(null)} />
 
       <Sheet open={confirmEnd} onClose={() => setConfirmEnd(false)} title="¿Terminar el entrenamiento?">
         <T v="small" muted>

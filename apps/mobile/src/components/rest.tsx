@@ -175,6 +175,22 @@ function WebArc({ endAt, total, stroke, width = 8, opacity = 1 }: { endAt: numbe
   );
 }
 
+/** Foco de luz radial de fondo (da profundidad sin recargar). */
+export function Spotlight({ id = "spot", cy = "42%" }: { id?: string; cy?: string }) {
+  const { c, scheme } = useTheme();
+  return (
+    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" pointerEvents="none">
+      <Defs>
+        <RadialGradient id={id} cx="50%" cy={cy} r="65%">
+          <Stop offset="0" stopColor={scheme === "dark" ? "#3A4446" : "#FFFFFF"} stopOpacity={1} />
+          <Stop offset="1" stopColor={c.bg} stopOpacity={1} />
+        </RadialGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />
+    </Svg>
+  );
+}
+
 /** Botón con relieve (tecla): borde inferior más oscuro y sombra; al tocarlo se hunde. */
 function KeyButton({ title, onPress, primary, style }: { title: string; onPress: () => void; primary?: boolean; style?: ViewStyle }) {
   const { c, scheme } = useTheme();
@@ -317,15 +333,7 @@ export function RestScreen() {
       ]}
     >
       {/* Foco de luz detrás del dial */}
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" pointerEvents="none">
-        <Defs>
-          <RadialGradient id="spot" cx="50%" cy="42%" r="65%">
-            <Stop offset="0" stopColor={scheme === "dark" ? "#3A4446" : "#FFFFFF"} stopOpacity={1} />
-            <Stop offset="1" stopColor={c.bg} stopOpacity={1} />
-          </RadialGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#spot)" />
-      </Svg>
+      <Spotlight id="spot-rest" />
 
       <View style={{ flex: 1, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16, paddingHorizontal: 20 }}>
         <View style={{ flex: 1, width: "100%", maxWidth: 560, alignSelf: "center" }}>
