@@ -1,5 +1,4 @@
 import { useKeepAwake } from "expo-keep-awake";
-import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
@@ -142,7 +141,6 @@ function Live({ a }: { a: ActiveWorkout }) {
       toast("Escribe cuántas reps hiciste", "error");
       return;
     }
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const res = await logSet(idx, w, r);
     if (res?.finished) await finish();
   };
@@ -160,18 +158,37 @@ function Live({ a }: { a: ActiveWorkout }) {
     const doneWork = a.items.some((x) => x.done && x.kind === "work");
     const skipped = a.items.some((x) => x.skip && !x.done);
     return (
-      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: "center", padding: 24, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: c.bg,
+          justifyContent: "center",
+          padding: 24,
+          paddingTop: insets.top + 24,
+          paddingBottom: insets.bottom + 24,
+        }}
+      >
         <View style={{ width: "100%", maxWidth: 420, alignSelf: "center", gap: 12 }}>
-          <T v="h2">{skipped && !doneWork ? "Saltaste todos los ejercicios" : skipped ? "No quedan series pendientes" : "Completaste todas las series"}</T>
+          <T v="h2">
+            {skipped && !doneWork
+              ? "Saltaste todos los ejercicios"
+              : skipped
+                ? "No quedan series pendientes"
+                : "Completaste todas las series"}
+          </T>
           <T v="small" muted>
-            {skipped ? "Puedes retomar los ejercicios que saltaste, terminar con lo que registraste o descartar la sesión." : "Termina para ver tu resumen y el próximo peso de cada ejercicio."}
+            {skipped
+              ? "Puedes retomar los ejercicios que saltaste, terminar con lo que registraste o descartar la sesión."
+              : "Termina para ver tu resumen y el próximo peso de cada ejercicio."}
           </T>
           {finishError ? (
             <T v="small" color={c.bad} accessibilityRole="alert">
               {finishError}
             </T>
           ) : null}
-          {skipped ? <Button variant={doneWork ? "secondary" : "primary"} title="Retomar ejercicios saltados" onPress={() => unskipAll()} /> : null}
+          {skipped ? (
+            <Button variant={doneWork ? "secondary" : "primary"} title="Retomar ejercicios saltados" onPress={() => unskipAll()} />
+          ) : null}
           {doneWork ? <Button variant="primary" title="Terminar y ver resumen" loading={busy} onPress={finish} /> : null}
           <Button variant="danger" title="Descartar sesión" disabled={busy} onPress={discard} />
           <Button variant="ghost" title="Volver a Entrenar" onPress={close} />
@@ -188,7 +205,13 @@ function Live({ a }: { a: ActiveWorkout }) {
       <View style={{ backgroundColor: c.hdr, borderBottomWidth: 1, borderBottomColor: c.line, paddingTop: insets.top }}>
         <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8, gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Minimizar la sesión" hitSlop={10} style={{ padding: 4 }}>
+            <Pressable
+              onPress={close}
+              accessibilityRole="button"
+              accessibilityLabel="Minimizar la sesión"
+              hitSlop={10}
+              style={{ padding: 4 }}
+            >
               <IconChevron dir="down" color={c.fg} size={22} />
             </Pressable>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -200,12 +223,20 @@ function Live({ a }: { a: ActiveWorkout }) {
                 <T v="small" muted num>
                   · {p.done}/{p.total} series
                 </T>
-                {queue ? <T v="small" color={c.accentInk}>· {queue} por sincronizar</T> : null}
+                {queue ? (
+                  <T v="small" color={c.accentInk}>
+                    · {queue} por sincronizar
+                  </T>
+                ) : null}
               </View>
             </View>
             <Button small title="Terminar" onPress={() => setConfirmEnd(true)} />
           </View>
-          <View style={{ height: 4, backgroundColor: c.surface2, borderRadius: 2, overflow: "hidden" }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: p.total, now: p.done }}>
+          <View
+            style={{ height: 4, backgroundColor: c.surface2, borderRadius: 2, overflow: "hidden" }}
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max: p.total, now: p.done }}
+          >
             <View style={{ height: 4, width: `${p.pct * 100}%`, backgroundColor: c.accent }} />
           </View>
         </View>
@@ -215,7 +246,11 @@ function Live({ a }: { a: ActiveWorkout }) {
         <ExerciseStrip a={view} curEi={cur.ei} />
       </View>
 
-      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
+      >
         <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 12 }}>
           <ExerciseHeader a={view} it={cur} />
           <SetList a={view} curIdx={idx} selIdx={editing} draft={draft} onSelectDone={setSel} onLog={onLog} />

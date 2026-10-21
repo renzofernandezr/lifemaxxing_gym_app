@@ -6,6 +6,7 @@ import { type ReactNode } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../lib/auth";
+import { press, tap } from "../lib/haptics";
 import { useWorkout, useWorkoutHydrated } from "../store/workout";
 import { useTheme } from "../theme/theme";
 import { F, MAX_WIDTH } from "../theme/tokens";
@@ -25,6 +26,10 @@ function HeaderTab({ isFocused, label, ref, ...props }: TabTriggerSlotProps & { 
     <Pressable
       ref={ref as never}
       {...props}
+      onPress={(e) => {
+        tap();
+        props.onPress?.(e);
+      }}
       accessibilityRole="tab"
       accessibilityState={{ selected: !!isFocused }}
       style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 999, backgroundColor: isFocused ? c.accent : "transparent" }}
@@ -40,16 +45,33 @@ export function AppHeader() {
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const pos = me ? programPosition(new Date(), me.profile.programStartDate, me.profile.timezone) : null;
-  const sub = me && pos
-    ? `${me.user.name.split(" ")[0]} · ${pos.beforeStart ? "empieza pronto" : pos.finished ? "programa completo" : `${pos.phase.name.split(" · ")[0]} · semana ${pos.week}`}`
-    : undefined;
+  const sub =
+    me && pos
+      ? `${me.user.name.split(" ")[0]} · ${pos.beforeStart ? "empieza pronto" : pos.finished ? "programa completo" : `${pos.phase.name.split(" · ")[0]} · semana ${pos.week}`}`
+      : undefined;
   return (
     <View style={{ backgroundColor: c.hdr, borderBottomWidth: 1, borderBottomColor: c.line, paddingTop: insets.top, zIndex: 20 }}>
-      <View style={{ width: "100%", maxWidth: MAX_WIDTH, alignSelf: "center", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingHorizontal: 16, paddingVertical: 10 }}>
+      <View
+        style={{
+          width: "100%",
+          maxWidth: MAX_WIDTH,
+          alignSelf: "center",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+        }}
+      >
         <Brand subtitle={sub} />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           {isDesktop ? (
-            <View accessibilityRole="tablist" accessibilityLabel="Secciones" style={{ flexDirection: "row", gap: 4, backgroundColor: c.surface2, padding: 4, borderRadius: 999 }}>
+            <View
+              accessibilityRole="tablist"
+              accessibilityLabel="Secciones"
+              style={{ flexDirection: "row", gap: 4, backgroundColor: c.surface2, padding: 4, borderRadius: 999 }}
+            >
               {TABS.map((t) => (
                 <TabTrigger key={t.name} name={t.name} asChild>
                   <HeaderTab label={t.label} />
@@ -73,10 +95,21 @@ function BarTab({ isFocused, label, icon, ref, ...props }: TabTriggerSlotProps &
     <Pressable
       ref={ref as never}
       {...props}
+      onPress={(e) => {
+        tap();
+        props.onPress?.(e);
+      }}
       accessibilityRole="tab"
       accessibilityState={{ selected: !!isFocused }}
       accessibilityLabel={label}
-      style={{ flex: 1, alignItems: "center", gap: 2, paddingVertical: 6, borderRadius: 8, backgroundColor: isFocused ? c.accentSoft : "transparent" }}
+      style={{
+        flex: 1,
+        alignItems: "center",
+        gap: 2,
+        paddingVertical: 6,
+        borderRadius: 8,
+        backgroundColor: isFocused ? c.accentSoft : "transparent",
+      }}
     >
       {icon(color)}
       <T style={{ fontFamily: F.semibold, fontSize: 13, lineHeight: 16, color }}>{label}</T>
@@ -94,7 +127,18 @@ export function BottomBar() {
   const resume = hydrated && !!active;
   return (
     <View style={{ backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.line, paddingBottom: insets.bottom }}>
-      <View accessibilityRole="tablist" style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 6, height: BOTTOM_BAR_HEIGHT }}>
+      <View
+        accessibilityRole="tablist"
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-end",
+          gap: 6,
+          paddingHorizontal: 16,
+          paddingTop: 6,
+          paddingBottom: 6,
+          height: BOTTOM_BAR_HEIGHT,
+        }}
+      >
         <TabTrigger name="progreso" asChild>
           <BarTab label="Progreso" icon={(col) => <IconProgress color={col} />} />
         </TabTrigger>
@@ -139,7 +183,10 @@ function CenterButton({
     <Pressable
       ref={innerRef as never}
       {...(Platform.OS === "web" && href ? { href } : {})}
-      onPress={onPress}
+      onPress={(e) => {
+        press();
+        onPress?.(e);
+      }}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: !!focused }}

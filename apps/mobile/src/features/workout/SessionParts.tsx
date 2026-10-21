@@ -10,6 +10,7 @@ import { Button, Stepper, T } from "../../components/ui";
 import type { ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
 import { F, R } from "../../theme/tokens";
+import { press, tap } from "../../lib/haptics";
 import { goToExercise, setCurrent, setRir, skipCurrentExercise, switchAlternative } from "./actions";
 import { parseNum, repsStep, stepValue, weightStep, type Draft } from "./draft";
 import { resolveRe, suggestionKey, type PlannedItem } from "./logic";
@@ -63,7 +64,10 @@ export function ExerciseStrip({ a, curEi }: { a: ActiveWorkout; curEi: number })
         return (
           <Pressable
             key={re.id}
-            onPress={() => goToExercise(ei)}
+            onPress={() => {
+              tap();
+              goToExercise(ei);
+            }}
             disabled={done || on}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
@@ -159,6 +163,7 @@ export function ExerciseHeader({ a, it }: { a: ActiveWorkout; it: PlannedItem })
         </T>
         <Pressable
           onPress={() => {
+            tap();
             if (confirmSkip) {
               setConfirmSkip(false);
               skipCurrentExercise();
@@ -169,7 +174,9 @@ export function ExerciseHeader({ a, it }: { a: ActiveWorkout; it: PlannedItem })
           hitSlop={8}
           style={confirmSkip ? { backgroundColor: c.accent, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 } : undefined}
         >
-          <T style={{ fontFamily: F.semibold, fontSize: 13, color: confirmSkip ? c.onAccent : c.accentInk }}>{confirmSkip ? "¿Saltar? Toca otra vez" : "Saltar"}</T>
+          <T style={{ fontFamily: F.semibold, fontSize: 13, color: confirmSkip ? c.onAccent : c.accentInk }}>
+            {confirmSkip ? "¿Saltar? Toca otra vez" : "Saltar"}
+          </T>
         </Pressable>
       </View>
       <T
@@ -192,7 +199,10 @@ export function ExerciseHeader({ a, it }: { a: ActiveWorkout; it: PlannedItem })
       ) : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14 }}>
         <Pressable
-          onPress={() => setShowCue((v) => !v)}
+          onPress={() => {
+            tap();
+            setShowCue((v) => !v);
+          }}
           accessibilityRole="button"
           accessibilityState={{ expanded: showCue }}
           hitSlop={6}
@@ -202,7 +212,14 @@ export function ExerciseHeader({ a, it }: { a: ActiveWorkout; it: PlannedItem })
           <IconChevron dir={showCue ? "up" : "down"} color={c.accentInk} size={14} />
         </Pressable>
         {canSwitch ? (
-          <Pressable onPress={() => switchAlternative(it.ei, !alt)} accessibilityRole="button" hitSlop={6}>
+          <Pressable
+            onPress={() => {
+              tap();
+              switchAlternative(it.ei, !alt);
+            }}
+            accessibilityRole="button"
+            hitSlop={6}
+          >
             <T style={{ fontFamily: F.semibold, fontSize: 13, color: c.accentInk }} numberOfLines={1}>
               {alt ? `Volver a ${shortName(re.exercise.name).toLowerCase()}` : `Alternativa: ${shortName(re.alt!.name).toLowerCase()}`}
             </T>
@@ -293,6 +310,7 @@ export function SetList({
         const r = active ? draft.r : String(it.done?.r ?? it.r);
         const fg = it.done && !active ? c.muted : c.fg;
         const onPress = () => {
+          tap();
           if (it.done) onSelectDone(selected ? null : idx);
           else {
             onSelectDone(null);
@@ -363,7 +381,14 @@ export function SetList({
               )}
             </Pressable>
             <Pressable
-              onPress={current ? onLog : onPress}
+              onPress={
+                current
+                  ? () => {
+                      press();
+                      onLog();
+                    }
+                  : onPress
+              }
               disabled={!!it.skip && !it.done}
               accessibilityRole="button"
               accessibilityLabel={
@@ -493,7 +518,10 @@ export function Dock({
                 return (
                   <Pressable
                     key={v}
-                    onPress={() => setRir(v)}
+                    onPress={() => {
+                      tap();
+                      setRir(v);
+                    }}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: on }}
                     accessibilityLabel={`${v === 3 ? "3 o más" : v} reps en reserva`}

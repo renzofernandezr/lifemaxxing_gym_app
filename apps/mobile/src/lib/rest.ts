@@ -1,7 +1,7 @@
 // Descanso: cuenta regresiva por timestamps (sigue funcionando en segundo plano), notificación local
 // programada al empezar (nativo), pitidos en los últimos 3 s y vibración al terminar.
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
-import * as Haptics from "expo-haptics";
+import { longBuzz } from "./haptics";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { useWorkout, type RestState } from "../store/workout";
@@ -52,14 +52,7 @@ export function beep(kind: "short" | "long") {
 
 export function restDone() {
   beep("long");
-  if (IS_NATIVE) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  else if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    try {
-      navigator.vibrate([220, 120, 220]);
-    } catch {
-      // ignorar
-    }
-  }
+  longBuzz();
 }
 
 async function schedule(endAt: number, next: string | null): Promise<string | null> {
