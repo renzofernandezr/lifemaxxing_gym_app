@@ -1,7 +1,6 @@
 // Sesión "una serie a la vez" (estilo Fitbod / Apple Fitness): solo la serie actual en grande,
 // el resto (lista de ejercicios, técnica, alternativa) en hojas inferiores.
 import { calibrate, EQUIPMENT_NAME, fk, SCHEME_NAME, setsText, weightText, type LoadSuggestion } from "@lifemaxxing/core";
-import { useEffect, useState } from "react";
 import { Platform, Pressable, TextInput, View, type TextStyle } from "react-native";
 import { IconCheck, IconMinus, IconPlus } from "../../components/icons";
 import { platesText } from "../../components/plates";
@@ -11,7 +10,7 @@ import { tap } from "../../lib/haptics";
 import type { ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
 import { F } from "../../theme/tokens";
-import { goToExercise, setCurrent, setRir, skipCurrentExercise, switchAlternative, unskipAll } from "./actions";
+import { goToExercise, setCurrent, setRir, switchAlternative, unskipAll } from "./actions";
 import { parseNum, repsStep, stepValue, weightStep, type Draft } from "./draft";
 import { resolveRe, suggestionKey, type PlannedItem } from "./logic";
 
@@ -377,33 +376,6 @@ export function TechniqueSheet({ a, it, open, onClose }: { a: ActiveWorkout; it:
         />
       ) : null}
     </Sheet>
-  );
-}
-
-/** "Saltar" con doble toque. */
-export function SkipPill() {
-  const { c } = useTheme();
-  const [confirm, setConfirm] = useState(false);
-  useEffect(() => {
-    if (!confirm) return;
-    const t = setTimeout(() => setConfirm(false), 3000);
-    return () => clearTimeout(t);
-  }, [confirm]);
-  return (
-    <Pressable
-      onPress={() => {
-        tap();
-        if (confirm) {
-          setConfirm(false);
-          skipCurrentExercise();
-        } else setConfirm(true);
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={confirm ? "Confirmar: saltar este ejercicio" : "Saltar este ejercicio"}
-      style={{ flex: 1, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: confirm ? c.accent : c.surface2 }}
-    >
-      <T style={{ fontFamily: F.semibold, fontSize: 14, color: confirm ? c.onAccent : c.fg }}>{confirm ? "¿Saltar? Toca otra vez" : "Saltar"}</T>
-    </Pressable>
   );
 }
 

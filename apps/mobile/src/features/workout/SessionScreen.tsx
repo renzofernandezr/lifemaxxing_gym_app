@@ -17,7 +17,7 @@ import { F } from "../../theme/tokens";
 import { discardWorkout, editDoneSet, finishWorkout, logSet, SessionGone, SyncPending, unskipAll } from "./actions";
 import { draftFor, parseNum, type Draft } from "./draft";
 import { nextPending, progress } from "./logic";
-import { ExercisesSheet, ExerciseProgress, Pill as FocusPill, SetDots, SetFocus, SkipPill, TechniqueSheet } from "./Focus";
+import { ExercisesSheet, ExerciseProgress, Pill as FocusPill, SetDots, SetFocus, TechniqueSheet } from "./Focus";
 
 const close = () => (router.canGoBack() ? router.back() : router.replace("/entrenar"));
 
@@ -298,7 +298,6 @@ function Live({ a }: { a: ActiveWorkout }) {
           <View style={{ flexDirection: "row", gap: 8 }}>
             <FocusPill title="Ejercicios" onPress={() => setSheet("exercises")} />
             <FocusPill title="Técnica" onPress={() => setSheet("technique")} />
-            <SkipPill />
           </View>
         </View>
       </View>
