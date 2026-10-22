@@ -42,7 +42,7 @@ export function validate<S extends z.ZodType>(schema: S, raw: unknown): z.output
   return r.data;
 }
 
-/** IP del cliente: Railway pone la IP real en X-Forwarded-For / X-Real-IP. */
+/** IP del cliente: el proxy (Render, Railway) pone la IP real en X-Forwarded-For / X-Real-IP. */
 export function clientIp(c: Ctx): string | null {
   const real = c.req.header("x-real-ip")?.trim();
   const fwd = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();

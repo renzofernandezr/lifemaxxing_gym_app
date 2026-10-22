@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Imagen de producción del servicio `app`: API (Hono) + web estática de Expo en el mismo origen.
-# La construye Railway en sus servidores; no hace falta Docker en la Mac.
+# La construye Render en sus servidores (antes Railway); no hace falta Docker en la Mac.
 
 FROM node:22-slim AS build
 WORKDIR /app
