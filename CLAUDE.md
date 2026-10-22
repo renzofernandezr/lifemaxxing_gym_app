@@ -55,25 +55,23 @@
 - El proyecto se queda en Expo SDK 57 a propósito: el Expo Go de la tienda todavía no soporta el 58. Cuando lo soporte, ver la fila correspondiente en `docs/DECISIONES.md`.
 - **Renzo arranca Expo/Metro él mismo.** No dejes Metro corriendo: si hay que reiniciarlo, apaga el tuyo y dale el comando.
 
-## TestFlight (sin servidor)
+## TestFlight
 
 - **Datos de la app**:
   - Proyecto EAS: `22fdf9a2-a1c1-45a3-b7f2-aec14b9ba6ca`, owner `renzofernandezg`.
-  - Bundle: `com.renzofernandez.lifemaxxinggym`.
-  - Nombre: "Life Maxxing". Si ese nombre ya está tomado en App Store Connect, usar "Life Maxxing Gym".
-- **Comando** (lo corre Renzo, porque es interactivo: pide el Apple ID y la verificación en 2 pasos):
+  - Bundle: `com.renzofernandez.lifemaxxinggym`. App Store Connect: `ascAppId` 6825488682 (está en `eas.json`).
+  - Nombre: "Life Maxxing".
+- **Comando** (ya no pide nada: los certificados están en EAS y el `ascAppId` en `eas.json`):
   ```
-  cd apps/mobile && npx eas-cli@latest build -p ios --profile demo --auto-submit
+  cd apps/mobile && npx eas-cli@latest build -p ios --profile production --auto-submit --non-interactive
   ```
-- **Pasos**:
-  1. Responder "sí" cuando pregunte por certificados, perfil y bundle id.
-  2. Esperar el build (15–25 min) y luego el procesamiento de Apple (5–15 min).
-  3. En App Store Connect, ir a TestFlight → Internal Testing, crear un grupo y agregarse.
-  4. Instalar desde la app TestFlight.
+  - El build tarda 15–25 min y el procesamiento de Apple otros 5–15. Luego se instala desde la app TestFlight, donde Renzo ya está en Internal Testing.
 - **Perfiles de `apps/mobile/eas.json`**:
-  - `demo`: `EXPO_PUBLIC_DEMO=1`, `autoIncrement` y versión remota.
-  - `preview` y `production`: usan la API real de Render (`apps/mobile/.env.production`).
-- En TestFlight los datos viven solo en el iPhone. Si se borra la app se pierden, y no pasan solos a la API cuando exista.
+  - `production`: usa la API real de Render (`apps/mobile/.env.production`). Es el de TestFlight desde el build 2 (1.0.0).
+  - `demo`: `EXPO_PUBLIC_DEMO=1`, datos solo en el iPhone. Fue el build 1.
+  - `preview`: API real, distribución interna (ad hoc).
+  - Todos usan `autoIncrement` con versión remota.
+- Lo que se guardó en el build `demo` vive solo en el iPhone y no pasa a la API.
 - **Lo que ya está resuelto para que Apple no rechace el build**:
   - Ícono de iOS sin canal alfa: `assets/images/icon-ios.png`.
   - `expo-audio` sin micrófono ni audio en segundo plano.
@@ -87,7 +85,8 @@
 - **Recursos** (workspace "Renzo's Workspace", región Virginia, sin proyecto de Render):
   - Postgres `lifemaxxing-gym-db` (`dpg-dbcljh8m7kps73c4sum0-a`), free, Postgres 18. Sin IPs permitidas: solo acepta la red privada de Render.
   - Web `lifemaxxing-gym` (`srv-dbclk5q9lscs73eapu20`), free, Docker (`Dockerfile`), healthcheck `/api/health`, rama `feat/app-rn`.
-  - **El auto-deploy no se dispara**, porque el repo se conectó como URL pública, sin la app de GitHub de Render. Después de cada push que toque código hay que correr `scripts/render-setup.sh deploy`. Si Renzo conecta GitHub en Render, el auto-deploy ya configurado debería funcionar (ignora `docs/**` y `**/*.md`).
+  - Como el servidor se duerme, la app lo despierta al abrirse o al volver a primer plano (`wakeApi()`). Login, registro, empezar y terminar entreno esperan hasta 75 s (`SLOW_TIMEOUT_MS`); el resto de peticiones, 15 s.
+  - **Auto-deploy en cada push a `feat/app-rn`**: la app de GitHub de Render está instalada en el repo desde el 21-oct. Ignora `docs/**` y `**/*.md`. `scripts/render-setup.sh deploy` queda solo para forzar un deploy.
   - Las migraciones corren al arrancar el contenedor.
   - El workspace también tiene `RoyalDB_api`, que no es de este proyecto. No lo toques.
 - **Límites del plan gratis**:

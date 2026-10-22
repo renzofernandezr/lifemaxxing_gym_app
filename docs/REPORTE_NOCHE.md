@@ -4,7 +4,8 @@
 
 Railway siguió caído, así que el servidor se montó en **Render, en plan gratis y solo con production**:
 
-- **production:** https://lifemaxxing-gym.onrender.com (API y web en el mismo origen), desde `feat/app-rn`. Después de cada push se despliega con `scripts/render-setup.sh deploy`: el auto-deploy no se dispara sin conectar GitHub en Render.
+- **production:** https://lifemaxxing-gym.onrender.com (API y web en el mismo origen), con auto-deploy en cada push a `feat/app-rn` (app de GitHub de Render instalada en el repo).
+- **TestFlight con la base de datos:** el build 2 (1.0.0) usa el perfil `production`, que apunta a esta API, y se envía solo a TestFlight.
 - **Migraciones:** las 3 se aplicaron sin errores en Postgres 18 en el primer deploy. En el segundo no hubo nada pendiente (idempotentes).
 - **Smoke test:** OK. Recorrió health, login, today, sesión, 2 series (con reintento idempotente), finish, check-in, overview y la web; al final borró sus datos. Login web con cookie (Secure, httpOnly) y CSRF probados.
 - **Usuario de Renzo:** creado. Su contraseña está **solo** en `.secrets/credenciales.txt` (ignorado por git). Cámbiala después del primer login.
