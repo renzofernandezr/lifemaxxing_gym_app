@@ -28,6 +28,19 @@ export interface RestCalibration {
   perHand: boolean;
 }
 
+/** Lo que se muestra en grande durante el descanso para motivar: cuántas series faltan del ejercicio. */
+export interface RestMotivation {
+  /** "Quedan 2 series", "¡Última serie!", "¡Ejercicio listo!"… */
+  headline: string;
+  /** "de press inclinado con barra", "Sigue: sentadilla con barra"… */
+  sub: string;
+  /** Series del ejercicio: hechas, la siguiente y las que faltan (sin calentamientos). */
+  dots: ("done" | "next" | "left")[];
+  /** Series hechas y totales del día. */
+  dayDone: number;
+  dayTotal: number;
+}
+
 export interface RestState {
   endAt: number;
   total: number;
@@ -37,6 +50,7 @@ export interface RestState {
   info: string | null;
   /** 1RM y cargas tras la serie de prueba, para mostrarlos en grande. */
   cal?: RestCalibration | null;
+  motivation?: RestMotivation | null;
   notificationId: string | null;
 }
 

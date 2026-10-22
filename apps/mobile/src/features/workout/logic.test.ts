@@ -1,6 +1,19 @@
 import { EXERCISE_BY_ID, resolveExercise, routineTemplate, type LoadSuggestion, type RoutineDTO } from "@lifemaxxing/core";
 import { describe, expect, it } from "vitest";
-import { applyServerSets, buildItems, logItem, nextPending, replanWeight, restAfter, skipExercise, toSetInput, type PlannedItem } from "./logic";
+import {
+  applyServerSets,
+  buildItems,
+  logItem,
+  nextPending,
+  replanWeight,
+  restAfter,
+  setsLeft,
+  skipExercise,
+  skipItem,
+  toSetInput,
+  unskipItem,
+  type PlannedItem,
+} from "./logic";
 
 const routine = (tp: number, key: "A" | "B" | "C"): RoutineDTO => {
   const r = routineTemplate(tp, key);
@@ -45,7 +58,7 @@ describe("primera sesión con calibración", () => {
   it("serie de prueba en los calibrables y series pendientes", () => {
     const inc = items.filter((x) => x.exerciseId === "inc");
     expect(inc.map((x) => x.kind)).toEqual(["test", "work", "work", "work"]);
-    expect(inc[0]).toMatchObject({ lo: 5, hi: 8, w: 40, rest: 180 });
+    expect(inc[0]).toMatchObject({ lo: 5, hi: 8, w: 40, rest: 120 });
     expect(inc.slice(1).every((x) => x.pending)).toBe(true);
     // Sin calentamiento calculado cuando hay prueba
     expect(items.some((x) => x.kind === "warmup")).toBe(false);
@@ -62,12 +75,17 @@ describe("primera sesión con calibración", () => {
     expect(nextPending(res.items, 1)).toBe(1);
   });
 
-  it("Kino: la búlgara arma la rampa 6 / 8 / 10 / 12", () => {
+  it("Kino: la sentadilla con barra arma la rampa 25 / 30 / 35 / 40", () => {
     const b = buildItems(B, none, { calibrate: true });
-    const idx = b.findIndex((x) => x.exerciseId === "bul" && x.kind === "test");
-    expect(b[idx]).toMatchObject({ lo: 6, hi: 8, rest: 120 });
-    const res = logItem(B, {}, b, idx, { w: 12, r: 8, rir: 1, clientId: "t2" });
-    expect(res.items.filter((x) => x.exerciseId === "bul" && x.kind === "work").map((x) => x.w)).toEqual([6, 8, 10, 12]);
+    const idx = b.findIndex((x) => x.exerciseId === "sq" && x.kind === "test");
+    expect(b[idx]).toMatchObject({ lo: 6, hi: 8, w: 40, rest: 120 });
+    const res = logItem(B, {}, b, idx, { w: 40, r: 8, rir: 1, clientId: "t2" });
+    expect(res.items.filter((x) => x.exerciseId === "sq" && x.kind === "work").map((x) => x.w)).toEqual([25, 30, 35, 40]);
+  });
+
+  it("la búlgara queda como alternativa de la sentadilla", () => {
+    const b = buildItems(B, none, { calibrate: true, useAlt: { [B.exercises[3].id]: true } });
+    expect(b.filter((x) => x.ei === 3).every((x) => x.exerciseId === "bul")).toBe(true);
   });
 });
 
@@ -108,6 +126,37 @@ describe("sesión con progresión", () => {
     const l = items.findIndex((x) => x.exerciseId === "lat");
     const res = logItem(A, {}, items, l, { w: 9, r: 14, clientId: "b" });
     expect(res.items.filter((x) => x.exerciseId === "lat").map(eff)).toEqual([9, 9, 9, 9]);
+  });
+
+  it("pasarse del tope sube las series siguientes y lo explica", () => {
+    const i1 = items.findIndex((x) => x.exerciseId === "inc" && x.kind === "work");
+    const res = logItem(A, {}, items, i1, { w: 65, r: 7, clientId: "up" });
+    const inc = res.items.filter((x) => x.exerciseId === "inc" && x.kind === "work");
+    expect(inc.map(eff)).toEqual([65, 62.5, 55]);
+    expect(inc[1].adj).toEqual({ dir: 1, fromKg: 60, reps: 7, lo: 4, hi: 5 });
+  });
+
+  it("quedarse corto baja las siguientes", () => {
+    const i2 = items.findIndex((x) => x.exerciseId === "ohp" && x.kind === "work");
+    const res = logItem(A, {}, items, i2, { w: 40, r: 4, clientId: "down" });
+    const ohp = res.items.filter((x) => x.exerciseId === "ohp" && x.kind === "work");
+    expect(ohp.map(eff)).toEqual([40, 32.5, 30]);
+    expect(ohp[2].adj?.dir).toBe(-1);
+  });
+
+  it("dentro del rango no ajusta", () => {
+    const i1 = items.findIndex((x) => x.exerciseId === "inc" && x.kind === "work");
+    const res = logItem(A, {}, items, i1, { w: 65, r: 5, clientId: "ok" });
+    expect(res.items.some((x) => x.adj)).toBe(false);
+  });
+
+  it("saltar una serie y retomarla", () => {
+    const i1 = items.findIndex((x) => x.exerciseId === "inc" && x.kind === "work");
+    expect(setsLeft(items, 0)).toBe(3);
+    const sk = skipItem(items, i1);
+    expect(nextPending(sk, i1)).toBe(i1 + 1);
+    expect(setsLeft(sk, 0)).toBe(2);
+    expect(unskipItem(sk, i1)[i1].skip).toBe(false);
   });
 
   it("saltar un ejercicio y descansos", () => {

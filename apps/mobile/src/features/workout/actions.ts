@@ -18,7 +18,7 @@ import { api, ApiError, SLOW_TIMEOUT_MS } from "../../lib/api";
 import { invalidateTraining } from "../../lib/queries";
 import { primeRestFeedback, skipRest, startRest } from "../../lib/rest";
 import { flushQueue } from "../../lib/sync";
-import { useWorkout, type ActiveWorkout } from "../../store/workout";
+import { useWorkout, type ActiveWorkout, type RestMotivation } from "../../store/workout";
 import {
   applyServerSets,
   buildItems,
@@ -27,8 +27,11 @@ import {
   replanWeight,
   resolveRe,
   restAfter,
+  setsLeft,
   skipExercise,
+  skipItem,
   toSetInput,
+  unskipItem,
   type PlannedItem,
 } from "./logic";
 
@@ -123,6 +126,39 @@ export function nextText(a: ActiveWorkout, it: PlannedItem): string {
   return `${ex.exercise.name} · ${itemTitle(a, it)} · ${w}${target} ${unitLabel(it.unit)}`;
 }
 
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/** Lo que el descanso muestra en grande: cuántas series faltan del ejercicio, o que se terminó y cuál sigue. */
+export function motivationFor(a: ActiveWorkout, items: PlannedItem[], logged: PlannedItem, nx: PlannedItem): RestMotivation {
+  const nameOf = (ei: number) => {
+    const re = a.routine.exercises[ei];
+    return lowerFirst(resolveRe(re, !!a.useAlt[re.id]).exercise.name);
+  };
+  const name = nameOf(logged.ei);
+  const series = items.filter((x) => x.ei === logged.ei && x.kind !== "warmup" && (x.done || !x.skip));
+  const dots = series.map((x) => (x.done ? "done" : x === nx ? "next" : "left") as RestMotivation["dots"][number]);
+  const left = setsLeft(items, logged.ei);
+  const re = a.routine.exercises[logged.ei];
+  const mini = resolveRe(re, !!a.useAlt[re.id]).scheme === "rest_pause" && logged.kind === "work";
+  const day = items.filter((x) => x.kind !== "warmup" && (x.done || !x.skip));
+  let headline: string;
+  let sub: string;
+  if (nx.ei !== logged.ei) {
+    headline = "¡Ejercicio listo!";
+    sub = `Sigue: ${nameOf(nx.ei)}`;
+  } else if (logged.kind === "warmup") {
+    headline = nx.kind === "warmup" ? "Calentando" : "¡A las series!";
+    sub = `${left} ${left === 1 ? "serie" : "series"} de ${name}`;
+  } else if (left === 1) {
+    headline = mini ? "¡Última mini-serie!" : "¡Última serie!";
+    sub = `de ${name}. ¡Dale con todo!`;
+  } else {
+    headline = `Quedan ${left} ${mini ? "mini-series" : "series"}`;
+    sub = `de ${name}`;
+  }
+  return { headline, sub, dots, dayDone: day.filter((x) => x.done).length, dayTotal: day.length };
+}
+
 /** Registra el item actual (o `idx`) y arranca el descanso. Devuelve el récord/calibración para avisar en la UI. */
 export async function logSet(idx: number, w: number, r: number) {
   const a = st().active;
@@ -158,7 +194,8 @@ export async function logSet(idx: number, w: number, r: number) {
     const cal = res.calibration
       ? { e1rmKg: res.calibration.e1rmKg, loads: res.calibration.loads, perHand: ex.exercise.equipment === "mancuernas" }
       : null;
-    await startRest(secs, title, nextText({ ...a, items: res.items }, nx), info, cal);
+    const motivation = motivationFor(a, res.items, logged, nx);
+    await startRest(secs, title, nextText({ ...a, items: res.items }, nx), { info, cal, motivation });
   }
   return { finished: false, calibration: res.calibration };
 }
@@ -229,10 +266,35 @@ export class SessionGone extends Error {
   }
 }
 
+/** Índice de la serie actual (la elegida o la siguiente pendiente). -1 si no queda nada. */
+function currentIdx(a: ActiveWorkout): number {
+  const cur = a.items[a.i];
+  return cur && !cur.done && !cur.skip ? a.i : nextPending(a.items, a.i);
+}
+
+/** Salta solo la serie actual: queda marcada y se puede retomar tocando su punto. */
+export function skipCurrentSet() {
+  const a = st().active;
+  if (!a) return;
+  const idx = currentIdx(a);
+  if (idx < 0) return;
+  const items = skipItem(a.items, idx);
+  const next = nextPending(items, idx + 1);
+  st().patchActive({ items, i: next === -1 ? idx : next });
+}
+
+/** Retoma una serie saltada y la deja como actual. */
+export function unskipSet(idx: number) {
+  const a = st().active;
+  if (!a || !a.items[idx]?.skip) return;
+  st().patchActive({ items: unskipItem(a.items, idx), i: idx });
+}
+
 export function skipCurrentExercise(): boolean {
   const a = st().active;
   if (!a) return false;
-  const ei = a.items[a.i]?.ei;
+  const idx = currentIdx(a);
+  const ei = a.items[idx]?.ei;
   if (ei === undefined) return false;
   const items = skipExercise(a.items, ei);
   const next = nextPending(items, a.i);

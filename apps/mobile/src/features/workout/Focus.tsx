@@ -1,7 +1,9 @@
 // Sesión "una serie a la vez" (estilo Fitbod / Apple Fitness): solo la serie actual en grande,
 // el resto (lista de ejercicios, técnica, alternativa) en hojas inferiores.
 import { calibrate, EQUIPMENT_NAME, fk, SCHEME_NAME, setsText, weightText, type LoadSuggestion } from "@lifemaxxing/core";
-import { Platform, Pressable, Text, TextInput, View, type TextStyle } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
+import { EXERCISE_FRAMES } from "../../components/exercise-media";
 import { IconCheck, IconMinus, IconPlus } from "../../components/icons";
 import { OneRmCard } from "../../components/onerm";
 import { platesText } from "../../components/plates";
@@ -11,7 +13,7 @@ import { tap } from "../../lib/haptics";
 import type { ActiveWorkout } from "../../store/workout";
 import { useTheme } from "../../theme/theme";
 import { F } from "../../theme/tokens";
-import { goToExercise, setCurrent, setRir, switchAlternative, unskipAll } from "./actions";
+import { goToExercise, setCurrent, setRir, skipCurrentExercise, skipCurrentSet, switchAlternative, unskipAll, unskipSet } from "./actions";
 import { parseNum, repsStep, stepValue, weightStep, type Draft } from "./draft";
 import { resolveRe, suggestionKey, type PlannedItem } from "./logic";
 
@@ -176,7 +178,14 @@ export function SetFocus({ a, it, editing, draft, setDraft }: { a: ActiveWorkout
   const prev = sug?.lastSets[it.k];
   let hint: { text: string; good?: boolean; accent?: boolean } | null = null;
   if (test) hint = { text: "Sin llegar al fallo. Con esta serie se calculan todas tus cargas." };
-  else if (it.cal && it.kind === "work") hint = { text: `Calculado con tu 1RM estimado de ${fk(Math.round(it.cal * 2) / 2)} kg`, accent: true };
+  else if (it.adj && !it.done) {
+    const d = Math.abs(it.w - it.adj.fromKg);
+    const range = it.adj.lo === it.adj.hi ? `${it.adj.lo}` : `${it.adj.lo}–${it.adj.hi}`;
+    hint =
+      it.adj.dir > 0
+        ? { text: `↑ Subimos ${fk(d)} kg: en la serie anterior hiciste ${it.adj.reps} reps y el objetivo era ${range}`, good: true }
+        : { text: `↓ Bajamos ${fk(d)} kg: en la serie anterior hiciste ${it.adj.reps} reps y el objetivo era ${range}`, accent: true };
+  } else if (it.cal && it.kind === "work") hint = { text: `Calculado con tu 1RM estimado de ${fk(Math.round(it.cal * 2) / 2)} kg`, accent: true };
   else if (it.kind === "warmup") hint = { text: "Ligero: solo prepara el movimiento." };
   else if (prev && prev.reps > 0 && !cardio) {
     const up = it.w > prev.weightKg;
@@ -294,15 +303,17 @@ export function SetDots({ a, curIdx, selIdx, onSelectDone }: { a: ActiveWorkout;
             onPress={() => {
               tap();
               if (done) onSelectDone(selIdx === idx ? null : idx);
-              else if (!it.skip) {
+              else {
+                // Una serie saltada se retoma tocando su punto.
                 onSelectDone(null);
-                setCurrent(idx);
+                if (it.skip) unskipSet(idx);
+                else setCurrent(idx);
               }
             }}
             hitSlop={8}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={`${warm ? (it.kind === "test" ? "Serie de prueba" : `Calentamiento ${it.k + 1}`) : `Serie ${it.k + 1}`}${done ? `, ${fk(it.done!.w)} kg × ${it.done!.r}. Toca para corregir` : ""}`}
+            accessibilityLabel={`${warm ? (it.kind === "test" ? "Serie de prueba" : `Calentamiento ${it.k + 1}`) : `Serie ${it.k + 1}`}${done ? `, ${fk(it.done!.w)} kg × ${it.done!.r}. Toca para corregir` : it.skip ? ", saltada. Toca para retomarla" : ""}`}
             style={{
               width: size + (active ? 8 : 0),
               height: size + (active ? 8 : 0),
@@ -372,11 +383,43 @@ export function ExercisesSheet({ a, curEi, open, onClose }: { a: ActiveWorkout; 
   );
 }
 
+/**
+ * Animación del ejercicio: las fotos de inicio y final del movimiento se alternan en bucle
+ * (fundido suave, con una pausa en cada extremo). Sin fotos (cardio), no muestra nada.
+ */
+export function ExerciseAnimation({ exerciseId, name }: { exerciseId: string; name: string }) {
+  const { c } = useTheme();
+  const frames = EXERCISE_FRAMES[exerciseId];
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!frames) return;
+    fade.setValue(0);
+    const step = (toValue: number) =>
+      Animated.timing(fade, { toValue, duration: 450, easing: Easing.inOut(Easing.quad), useNativeDriver: Platform.OS !== "web" });
+    const loop = Animated.loop(Animated.sequence([Animated.delay(650), step(1), Animated.delay(650), step(0)]));
+    loop.start();
+    return () => loop.stop();
+  }, [frames, fade]);
+  if (!frames) return null;
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`Animación de ${name.toLowerCase()}: posición inicial y final del movimiento`}
+      style={{ width: "100%", aspectRatio: 1.5, borderRadius: 16, overflow: "hidden", backgroundColor: c.surface2 }}
+    >
+      <Image source={frames[0]} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Animated.Image source={frames[1]} style={[StyleSheet.absoluteFill, { opacity: fade }]} resizeMode="cover" />
+    </View>
+  );
+}
+
 export function TechniqueSheet({ a, it, open, onClose }: { a: ActiveWorkout; it: PlannedItem; open: boolean; onClose: () => void }) {
   const { re, alt, ex } = exOf(a, it);
   const canSwitch = !!re.alt && !a.items.some((x) => x.ei === it.ei && x.done);
   return (
     <Sheet open={open} onClose={onClose} title={ex.exercise.name}>
+      {open ? <ExerciseAnimation exerciseId={ex.exerciseId} name={ex.exercise.name} /> : null}
       <T style={{ fontSize: 16, lineHeight: 24 }}>{ex.exercise.cue}</T>
       {re.note && !alt ? <T v="small" muted>{re.note}</T> : null}
       <T v="small" muted>
@@ -391,6 +434,37 @@ export function TechniqueSheet({ a, it, open, onClose }: { a: ActiveWorkout; it:
           }}
         />
       ) : null}
+    </Sheet>
+  );
+}
+
+/** Saltar: solo esta serie o el ejercicio completo. Lo saltado se retoma tocando su punto o desde Ejercicios. */
+export function SkipSheet({ a, it, open, onClose }: { a: ActiveWorkout; it: PlannedItem; open: boolean; onClose: () => void }) {
+  const { ex } = exOf(a, it);
+  const left = a.items.filter((x) => x.ei === it.ei && !x.done && !x.skip).length;
+  const what = it.kind === "warmup" ? "este calentamiento" : it.kind === "test" ? "la serie de prueba" : "esta serie";
+  return (
+    <Sheet open={open} onClose={onClose} title="Saltar">
+      <Button
+        variant="primary"
+        title={`Saltar ${what}`}
+        onPress={() => {
+          skipCurrentSet();
+          onClose();
+        }}
+      />
+      {left > 1 ? (
+        <Button
+          title={`Saltar ${ex.exercise.name.toLowerCase()}`}
+          onPress={() => {
+            skipCurrentExercise();
+            onClose();
+          }}
+        />
+      ) : null}
+      <T v="small" muted>
+        Lo que saltes queda pendiente: tócalo en los puntos de abajo o en Ejercicios para retomarlo.
+      </T>
     </Sheet>
   );
 }

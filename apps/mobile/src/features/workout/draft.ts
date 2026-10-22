@@ -1,4 +1,4 @@
-import { fk, stepOf, type ResolvedExercise } from "@lifemaxxing/core";
+import { fk, stepFrom, stepOf, type ResolvedExercise } from "@lifemaxxing/core";
 import type { PlannedItem } from "./logic";
 
 /** Valores que el usuario está editando para la serie actual (compartidos por la tarjeta y la tabla). */
@@ -23,4 +23,5 @@ export function repsStep(it: PlannedItem): number {
   return it.unit === "sec" ? 5 : 1;
 }
 
-export const stepValue = (s: string, step: number, dir: -1 | 1) => fk(Math.max(0, Math.round((parseNum(s) + step * dir) * 100) / 100));
+/** − y + caen siempre en la grilla del equipo (mancuernas de 2 en 2, barra de 2.5 en 2.5…). */
+export const stepValue = (s: string, step: number, dir: -1 | 1) => fk(stepFrom(parseNum(s), step, dir));

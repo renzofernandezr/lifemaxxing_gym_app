@@ -4,7 +4,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-aud
 import { longBuzz } from "./haptics";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { useWorkout, type RestCalibration, type RestState } from "../store/workout";
+import { useWorkout, type RestCalibration, type RestMotivation, type RestState } from "../store/workout";
 
 const IS_NATIVE = Platform.OS !== "web";
 let players: { short: AudioPlayer; long: AudioPlayer } | null = null;
@@ -73,11 +73,26 @@ async function cancel(id: string | null | undefined) {
   if (IS_NATIVE && id) await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
 }
 
-async function doStartRest(seconds: number, title: string, next: string | null, info: string | null = null, cal: RestCalibration | null = null) {
+export interface RestExtras {
+  info?: string | null;
+  cal?: RestCalibration | null;
+  motivation?: RestMotivation | null;
+}
+
+async function doStartRest(seconds: number, title: string, next: string | null, extras: RestExtras = {}) {
   const prev = useWorkout.getState().rest;
   await cancel(prev?.notificationId);
   const endAt = Date.now() + seconds * 1000;
-  const rest: RestState = { endAt, total: seconds * 1000, title, next, info, cal, notificationId: null };
+  const rest: RestState = {
+    endAt,
+    total: seconds * 1000,
+    title,
+    next,
+    info: extras.info ?? null,
+    cal: extras.cal ?? null,
+    motivation: extras.motivation ?? null,
+    notificationId: null,
+  };
   useWorkout.getState().setRest(rest);
   const id = await schedule(endAt, next);
   const cur = useWorkout.getState().rest;
@@ -116,7 +131,7 @@ function serial<T>(fn: () => Promise<T>): Promise<T> {
   return p;
 }
 
-export const startRest = (seconds: number, title: string, next: string | null, info: string | null = null, cal: RestCalibration | null = null) =>
-  serial(() => doStartRest(seconds, title, next, info, cal));
+export const startRest = (seconds: number, title: string, next: string | null, extras: RestExtras = {}) =>
+  serial(() => doStartRest(seconds, title, next, extras));
 export const adjustRest = (deltaSec: number) => serial(() => doAdjustRest(deltaSec));
 export const skipRest = () => serial(() => doSkipRest());

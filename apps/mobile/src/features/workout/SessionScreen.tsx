@@ -17,7 +17,7 @@ import { F } from "../../theme/tokens";
 import { discardWorkout, editDoneSet, finishWorkout, logSet, SessionGone, SyncPending, unskipAll } from "./actions";
 import { draftFor, parseNum, type Draft } from "./draft";
 import { nextPending, progress } from "./logic";
-import { ExercisesSheet, ExerciseProgress, Pill as FocusPill, SetDots, SetFocus, TechniqueSheet } from "./Focus";
+import { ExercisesSheet, ExerciseProgress, Pill as FocusPill, SetDots, SetFocus, SkipSheet, TechniqueSheet } from "./Focus";
 
 const close = () => (router.canGoBack() ? router.back() : router.replace("/entrenar"));
 
@@ -90,7 +90,7 @@ function Live({ a }: { a: ActiveWorkout }) {
     const t = setTimeout(() => setRestOver(true), Math.max(0, rest.endAt - Date.now()));
     return () => clearTimeout(t);
   }, [rest]);
-  const [sheet, setSheet] = useState<"exercises" | "technique" | null>(null);
+  const [sheet, setSheet] = useState<"exercises" | "technique" | "skip" | null>(null);
 
   // Al cambiar de serie (o al elegir una para corregir), el panel toma sus valores.
   useEffect(() => {
@@ -298,12 +298,14 @@ function Live({ a }: { a: ActiveWorkout }) {
           <View style={{ flexDirection: "row", gap: 8 }}>
             <FocusPill title="Ejercicios" onPress={() => setSheet("exercises")} />
             <FocusPill title="Técnica" onPress={() => setSheet("technique")} />
+            {editing === null ? <FocusPill title="Saltar" onPress={() => setSheet("skip")} /> : null}
           </View>
         </View>
       </View>
 
       <ExercisesSheet a={view} curEi={cur.ei} open={sheet === "exercises"} onClose={() => setSheet(null)} />
       <TechniqueSheet a={view} it={cur} open={sheet === "technique"} onClose={() => setSheet(null)} />
+      <SkipSheet a={view} it={cur} open={sheet === "skip"} onClose={() => setSheet(null)} />
 
       <Sheet open={confirmEnd} onClose={() => setConfirmEnd(false)} title="¿Terminar el entrenamiento?">
         <T v="small" muted>

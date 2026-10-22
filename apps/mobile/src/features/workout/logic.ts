@@ -1,5 +1,6 @@
 // Lógica pura del modo Entrenar (port de build()/logSet() del prototipo). Sin React: se testea con vitest.
 import {
+  autoregulate,
   calibrate,
   propagateWeightChange,
   round,
@@ -22,6 +23,18 @@ export interface DoneInfo {
   at: string;
   clientId: string;
   rir?: number;
+}
+
+/** Ajuste automático de una serie por cómo salió la anterior del mismo ejercicio. */
+export interface AdjustInfo {
+  /** +1 subió, −1 bajó. */
+  dir: 1 | -1;
+  /** Peso planificado antes del ajuste. */
+  fromKg: number;
+  /** Reps que se hicieron en la serie que provocó el ajuste y su rango. */
+  reps: number;
+  lo: number;
+  hi: number;
 }
 
 export interface PlannedItem {
@@ -49,6 +62,8 @@ export interface PlannedItem {
   pending?: boolean;
   /** e1RM con el que se calculó la carga. */
   cal?: number;
+  /** El peso se ajustó por la serie anterior. */
+  adj?: AdjustInfo;
   done?: DoneInfo;
   skip?: boolean;
 }
@@ -65,6 +80,9 @@ export function resolveRe(re: RoutineExerciseDTO, alt = false): ResolvedExercise
   if (alt && re.alt) return { ...re, exerciseId: re.alt.id, exercise: re.alt };
   return re;
 }
+
+/** Descanso tras la serie de prueba (casi al fallo: como un básico pesado). */
+const TEST_REST_SEC = 120;
 
 /** Peso inicial razonable para la serie de prueba cuando no hay historial. */
 function defaultTestWeight(ex: ResolvedExercise): number {
@@ -112,7 +130,7 @@ export function buildItems(routine: RoutineDTO, suggestions: Record<string, Load
         label: null,
         w: sug?.bestSet ? round(sug.bestSet.weightKg * 0.85, stepOf(ex.exercise)) : defaultTestWeight(ex),
         r: kino ? first.repsMin : 6,
-        rest: kino ? 120 : 180,
+        rest: TEST_REST_SEC,
       });
       ex.sets.forEach((s, k) =>
         items.push({
@@ -156,7 +174,8 @@ export function buildItems(routine: RoutineDTO, suggestions: Record<string, Load
           label: null,
           w: wu.weightKg,
           r: wu.reps,
-          rest: k === ws.length - 1 ? 180 : 120,
+          // Calentamiento: 1 min entre series ligeras y 1:30 antes de la primera serie de trabajo.
+          rest: k === ws.length - 1 ? 90 : 60,
           pct: wu.pct,
         }),
       );
@@ -222,13 +241,17 @@ export function logItem(
       }
     });
     calibration = { exerciseId: ex.exerciseId, e1rmKg: r.e1rmKg, loads: r.loads, reliable: r.reliable, weightKg: done.w, reps: done.r, rir };
-  } else if (it.kind === "work" && done.w !== it.w) {
-    // Pirámide: recalcula las siguientes; Kino: desplaza la rampa; rest-pause: heredan el peso.
+  } else if (it.kind === "work") {
     const works = out.filter((x) => x.ei === it.ei && x.kind === "work");
-    const planned = works.map((x) => (x.done && x !== it ? x.done.w : x.w));
-    const changed = propagateWeightChange(ex.scheme, ex, planned, it.k, done.w);
+    let planned = works.map((x) => (x.done && x !== it ? x.done.w : x.w));
+    // Si cambió el peso: pirámide recalcula las siguientes, Kino desplaza la rampa y rest-pause hereda el peso.
+    if (done.w !== it.w) planned = propagateWeightChange(ex.scheme, ex, planned, it.k, done.w);
+    // Ajuste por las reps: por encima del tope suben las siguientes y por debajo del mínimo bajan.
+    const reg = autoregulate(ex, planned, it.k, { weightKg: done.w, reps: done.r }, (j) => works[j] !== it && !!works[j].done);
     works.forEach((x, k) => {
-      if (!x.done) x.w = changed[k];
+      if (x.done) return;
+      if (reg.dir !== 0 && reg.weights[k] !== planned[k]) x.adj = { dir: reg.dir, fromKg: planned[k], reps: done.r, lo: it.lo, hi: it.hi };
+      x.w = reg.weights[k];
     });
   }
   return { items: out, calibration };
@@ -255,6 +278,20 @@ export function replanWeight(routine: RoutineDTO, useAlt: Record<string, boolean
 
 export function skipExercise(items: PlannedItem[], ei: number): PlannedItem[] {
   return items.map((x) => (x.ei === ei && !x.done ? { ...x, skip: true } : x));
+}
+
+/** Salta una sola serie (queda pendiente de retomar tocando su punto). */
+export function skipItem(items: PlannedItem[], idx: number): PlannedItem[] {
+  return items.map((x, i) => (i === idx && !x.done ? { ...x, skip: true } : x));
+}
+
+export function unskipItem(items: PlannedItem[], idx: number): PlannedItem[] {
+  return items.map((x, i) => (i === idx ? { ...x, skip: false } : x));
+}
+
+/** Series que faltan de un ejercicio (sin calentamientos ni saltadas). */
+export function setsLeft(items: PlannedItem[], ei: number): number {
+  return items.filter((x) => x.ei === ei && x.kind !== "warmup" && !x.done && !x.skip).length;
 }
 
 /** Descanso tras registrar `it` (0 = sin descanso). */

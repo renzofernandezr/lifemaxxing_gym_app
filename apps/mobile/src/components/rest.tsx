@@ -5,7 +5,7 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, View, useWindowDimen
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { tick } from "../lib/haptics";
 import { adjustRest, beep, restDone, skipRest } from "../lib/rest";
-import { useWorkout } from "../store/workout";
+import { useWorkout, type RestMotivation } from "../store/workout";
 import { useTheme } from "../theme/theme";
 import { F, R } from "../theme/tokens";
 import { OneRmCard } from "./onerm";
@@ -95,7 +95,7 @@ export function RestBar({ bottom = 0 }: { bottom?: number }) {
             style={{ flex: 1, minWidth: 0, gap: 2 }}
           >
             <T v="eyebrow" numberOfLines={1}>
-              {done ? "¡Vamos!" : rest.title}
+              {done ? "¡Vamos!" : (rest.motivation?.headline ?? rest.title)}
             </T>
             <T style={{ fontFamily: F.extrabold, fontSize: 30, lineHeight: 34, color: done ? c.good : c.fg }} num>
               {done ? "0:00" : secondsText(left / 1000)}
@@ -165,9 +165,56 @@ function WebArc({ endAt, total, stroke }: { endAt: number; total: number; stroke
   );
 }
 
+/** Mensaje grande del descanso: cuántas series faltan del ejercicio (con sus puntos) o que ya se terminó. */
+function Motivation({ m, done }: { m: RestMotivation; done: boolean }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ alignItems: "center", gap: 6 }} accessibilityRole="header" accessibilityLabel={`${m.headline} ${m.sub}`}>
+      <T center numberOfLines={1} style={{ fontFamily: F.extrabold, fontSize: 30, lineHeight: 34, letterSpacing: -0.6, color: done ? c.good : c.accentInk }}>
+        {m.headline}
+      </T>
+      <T center numberOfLines={2} style={{ fontFamily: F.semibold, fontSize: 16, lineHeight: 21, color: c.muted }}>
+        {m.sub}
+      </T>
+      {m.dots.length > 1 ? (
+        <View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
+          {m.dots.map((d, i) => (
+            <View
+              key={i}
+              style={{
+                width: d === "next" ? 30 : 22,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: d === "done" ? c.accent : d === "next" ? c.accentInk : c.line,
+              }}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Avance del día: "7 de 15 series hoy" con una barra fina. */
+function DayProgress({ done, total }: { done: number; total: number }) {
+  const { c } = useTheme();
+  if (!total) return null;
+  return (
+    <View style={{ alignSelf: "stretch", gap: 6 }}>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.surface2, overflow: "hidden" }}>
+        <View style={{ height: 4, width: `${Math.min(100, (done / total) * 100)}%`, backgroundColor: c.accent }} />
+      </View>
+      <T v="tiny" muted center num>
+        {done} de {total} series hoy
+      </T>
+    </View>
+  );
+}
+
 /**
  * Descanso dentro de la sesión, en el mismo lugar que la serie (un paso más de la secuencia).
- * Anillo plano que se vacía de forma continua, cuenta grande, −15 s / +30 s y la siguiente serie.
+ * Arriba, en grande, cuántas series faltan del ejercicio; luego el anillo plano que se vacía de forma continua,
+ * la cuenta, −15 s / +30 s, la siguiente serie y el avance del día.
  */
 export function RestInline() {
   const { c } = useTheme();
@@ -188,17 +235,22 @@ export function RestInline() {
 
   if (!v) return null;
   const { rest, left, done } = v;
-  // Con la tarjeta del 1RM debajo, el anillo se achica para que todo quepa sin scroll.
-  const ring = Math.max(200, Math.min(width - 72, height * (v?.rest.cal ? 0.29 : 0.36), 320));
+  const m = rest.motivation;
+  // Con el mensaje y la tarjeta del 1RM, el anillo se achica para que todo quepa sin scroll.
+  const ring = Math.max(170, Math.min(width - 72, height * ((rest.cal ? 0.29 : 0.36) - (m ? 0.07 : 0)), 320));
   const digits = Math.round(ring * (done ? 0.2 : 0.28));
   const color = done ? c.good : c.accent;
   const dashoffset = progress.interpolate({ inputRange: [0, 1], outputRange: [0, RING_C] });
 
   return (
     <View style={{ alignItems: "center", gap: 16 }}>
-      <T v="eyebrow" center numberOfLines={1}>
-        {done ? "¡Vamos! Terminó el descanso" : rest.title}
-      </T>
+      {m ? (
+        <Motivation m={m} done={done} />
+      ) : (
+        <T v="eyebrow" center numberOfLines={1}>
+          {done ? "¡Vamos! Terminó el descanso" : rest.title}
+        </T>
+      )}
       <View style={{ width: ring, height: ring, alignItems: "center", justifyContent: "center" }}>
         <Svg viewBox="0 0 220 220" width={ring} height={ring} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
           <Circle cx={110} cy={110} r={RING_R} stroke={c.surface2} strokeWidth={STROKE} fill="none" />
@@ -245,6 +297,7 @@ export function RestInline() {
           Siguiente: <T v="small" style={{ fontFamily: F.semibold }}>{rest.next}</T>
         </T>
       ) : null}
+      {m ? <DayProgress done={m.dayDone} total={m.dayTotal} /> : null}
     </View>
   );
 }
