@@ -142,7 +142,11 @@ function nextText(ex: ResolvedExercise, next: number[], best: DoneSet | null): s
     return next.every((w) => w <= 0) ? "Próxima: busca una rep más por serie" : `Próxima: PC + ${fk(Math.max(...next))} kg`;
   }
   if (ex.scheme === "rpt") return `Próxima: ${next.map(fk).join(" · ")} kg`;
-  if (ex.scheme === "kino") return `Próxima: ${fk(next[0])} → ${fk(next[next.length - 1])} kg`;
+  if (ex.scheme === "kino") {
+    const first = next[0];
+    const last = next[next.length - 1];
+    return first === last ? `Próxima: ${fk(first)} kg` : `Próxima: ${fk(first)} → ${fk(last)} kg`;
+  }
   return `Próxima: ${fk(next[0])} kg`;
 }
 

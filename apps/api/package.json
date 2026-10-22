@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:migrate": "tsx --env-file-if-exists=../../.env src/db/migrate.ts",
     "db:migrate:dev": "tsx --env-file-if-exists=../../.env src/db/migrate.ts --dev",
-    "gen:seed": "tsx scripts/gen-seed.ts"
+    "gen:seed": "tsx scripts/gen-seed.ts",
+    "gen:sync": "tsx scripts/gen-seed.ts --sync"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",

@@ -23,12 +23,12 @@ const ex = (
 
 export const EXERCISES: Exercise[] = [
   ex("inc", "Press inclinado con barra", "barra", 2.5, ["pecho", "hombros", "tríceps"],
-    "La serie 1 a una rep del fallo, con técnica limpia. En la 2 y la 3 deja una rep en reserva. Al terminar, descansa 4–5 min."),
+    "La serie 1 a una rep del fallo, con técnica limpia. En la 2 y la 3 deja una rep en reserva."),
   ex("ohp", "Press militar de pie", "barra", 2.5, ["hombros", "tríceps"],
     "Glúteos y abdomen firmes. La barra sube pegada a la cara y termina encima de la cabeza."),
   ex("tri", "Extensión de tríceps con cuerda", "polea", 2.5, ["tríceps"],
     "Codos pegados al torso. Abre la cuerda al final del recorrido."),
-  ex("lat", "Elevaciones laterales", "mancuernas", 1, ["hombros"],
+  ex("lat", "Elevaciones laterales", "mancuernas", 2, ["hombros"],
     "Mismo peso en las cuatro. Solo 10–15 s entre mini-series. Subes cuando logras 15 + 6 + 6 + 6."),
   ex("knee", "Elevación de rodillas colgado", "peso_corporal", 2.5, ["abdomen"],
     "Rodillas al pecho sin balanceo. Con 3 × 12 sostén una mancuerna entre los pies."),
@@ -71,7 +71,7 @@ export const EXERCISES: Exercise[] = [
     "Siéntate atrás en el cajón sin rebotar, pausa breve y sube empujando el suelo."),
   ex("sl_rdl", "Peso muerto rumano a una pierna", "mancuernas", 2, ["isquios", "glúteos"],
     "Cadera cuadrada al suelo, pierna de apoyo apenas flexionada. Baja lento y controla el equilibrio."),
-  ex("rdf", "Pájaros sentado", "mancuernas", 1, ["hombro posterior"],
+  ex("rdf", "Pájaros sentado", "mancuernas", 2, ["hombro posterior"],
     "Sentado e inclinado sobre las piernas. Abre los brazos con los codos algo flexionados."),
   // Alternativas
   ex("chin_w", "Dominada supina lastrada", "peso_corporal", 1.25, ["espalda", "bíceps"],
@@ -82,6 +82,11 @@ export const EXERCISES: Exercise[] = [
     "Agarre prono, sube hasta pasar la barbilla y baja controlado."),
   ex("hip_thrust", "Hip thrust con barra", "barra", 2.5, ["glúteos", "isquios"],
     "Espalda alta en el banco, barbilla al pecho. Empuja con los talones y aprieta glúteos arriba."),
+  // Cambios de Renzo (22-oct): sentadilla con barra en lugar de la búlgara y jalón con brazos rectos en lugar de face pulls.
+  ex("sq", "Sentadilla con barra", "barra", 2.5, ["cuádriceps", "glúteos"],
+    "Barra sobre los trapecios y pies al ancho de los hombros. Baja con el pecho arriba hasta que la cadera llegue a la altura de las rodillas, rodillas en la línea de los pies, y sube empujando el suelo."),
+  ex("sapd", "Jalón con brazos rectos en polea", "polea", 2.5, ["dorsales", "espalda alta"],
+    "De pie frente a la polea alta, brazos casi rectos. Baja la barra o la cuerda hasta los muslos llevando la fuerza a los dorsales, aprieta 1 s y sube lento."),
 ];
 
 export const EXERCISE_BY_ID: Record<string, Exercise> = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
@@ -107,6 +112,9 @@ const re = (list: ReInput[]): RoutineExerciseTemplate[] =>
   }));
 
 const DROP = "−10 %, más reps";
+/** Descansos (pedido de Renzo): 2 min en los básicos pesados y 1:30 en el resto. */
+const HEAVY = 120;
+const LIGHT = 90;
 const C_EXERCISES = re([
   { exerciseId: "car", scheme: "cardio", sets: [s(40, 60, 120, "bloque continuo", "min")] },
   { exerciseId: "hlr", scheme: "straight", sets: times(4, s(8, 12, 60)) },
@@ -120,14 +128,13 @@ export const ROUTINES: RoutineTemplate[] = [
     templatePhase: 1, key: "A", name: "Workout A", focus: "Pecho · hombros · tríceps · abs",
     exercises: re([
       { exerciseId: "inc", scheme: "rpt", warmup: [[0.5, 6], [0.7, 5], [0.8, 3]], calibratable: true,
-        note: "Al terminar, descansa 4–5 min.",
-        sets: [s(4, 5, 180, "la pesada"), s(6, 7, 180, DROP), s(8, 10, 270, DROP)] },
+        sets: [s(4, 5, HEAVY, "la pesada"), s(6, 7, HEAVY, DROP), s(8, 10, HEAVY, DROP)] },
       { exerciseId: "ohp", scheme: "rpt", calibratable: true,
-        sets: [s(6, 8, 180, "la pesada"), s(8, 10, 180, DROP), s(8, 10, 120, DROP)] },
+        sets: [s(6, 8, HEAVY, "la pesada"), s(8, 10, HEAVY, DROP), s(8, 10, HEAVY, DROP)] },
       { exerciseId: "tri", scheme: "rpt", calibratable: true,
-        sets: [s(6, 8, 120, "la pesada"), s(8, 10, 120, DROP), s(10, 12, 120, DROP)] },
+        sets: [s(6, 8, LIGHT, "la pesada"), s(8, 10, LIGHT, DROP), s(10, 12, LIGHT, DROP)] },
       { exerciseId: "lat", scheme: "rest_pause",
-        sets: [s(12, 15, 12, "activación a tope"), s(4, 6, 12, "mini-serie 1"), s(4, 6, 12, "mini-serie 2"), s(4, 6, 90, "mini-serie 3")] },
+        sets: [s(12, 15, 12, "activación a tope"), s(4, 6, 12, "mini-serie 1"), s(4, 6, 12, "mini-serie 2"), s(4, 6, LIGHT, "mini-serie 3")] },
       { exerciseId: "knee", scheme: "straight", sets: times(3, s(8, 12, 60)) },
     ]),
   },
@@ -135,16 +142,18 @@ export const ROUTINES: RoutineTemplate[] = [
     templatePhase: 1, key: "B", name: "Workout B", focus: "Espalda · bíceps · piernas",
     exercises: re([
       { exerciseId: "neg", scheme: "straight", isAddition: true, note: "Añadido, no es del curso: bajar en 5 s.",
-        sets: [s(3, 5, 120), s(3, 5, 120), s(3, 5, 150)] },
+        sets: times(3, s(3, 5, LIGHT)) },
       { exerciseId: "jal", scheme: "rpt", altExerciseId: "chin_w", warmup: [[0.5, 6], [0.75, 3]], calibratable: true,
         note: "Sustituye a las chinups lastradas",
-        sets: [s(6, 8, 180, "la pesada"), s(8, 10, 180, DROP), s(10, 12, 150, DROP)] },
+        sets: [s(6, 8, HEAVY, "la pesada"), s(8, 10, HEAVY, DROP), s(10, 12, HEAVY, DROP)] },
       { exerciseId: "ham", scheme: "rpt", dropKg: 2, calibratable: true,
-        sets: [s(6, 8, 120, "la pesada"), s(6, 8, 120, "−2 kg por mano"), s(8, 10, 150, "−2 kg por mano")] },
-      { exerciseId: "bul", scheme: "kino", calibratable: true, sets: times(4, s(6, 8, 120)) },
-      { exerciseId: "rdl", scheme: "kino", calibratable: true,
-        sets: [s(10, 12, 90), s(10, 12, 90), s(10, 12, 90), s(10, 12, 120)] },
-      { exerciseId: "fp", scheme: "kino", sets: times(4, s(12, 15, 75)) },
+        sets: [s(6, 8, LIGHT, "la pesada"), s(6, 8, LIGHT, "−2 kg por mano"), s(8, 10, LIGHT, "−2 kg por mano")] },
+      { exerciseId: "sq", scheme: "kino", altExerciseId: "bul", calibratable: true,
+        note: "Reemplaza a la sentadilla búlgara (la tienes como alternativa).",
+        sets: times(4, s(6, 8, HEAVY)) },
+      { exerciseId: "rdl", scheme: "kino", calibratable: true, sets: times(4, s(10, 12, LIGHT)) },
+      { exerciseId: "sapd", scheme: "kino", altExerciseId: "fp", note: "Reemplaza a los face pulls (los tienes como alternativa).",
+        sets: times(4, s(12, 15, LIGHT)) },
     ]),
   },
   { templatePhase: 1, key: "C", name: "Cardio + abs", focus: "Sábado · día sin pesas", exercises: C_EXERCISES },
@@ -152,13 +161,13 @@ export const ROUTINES: RoutineTemplate[] = [
     templatePhase: 2, key: "A", name: "Workout A", focus: "Pecho · tríceps · hombros",
     exercises: re([
       { exerciseId: "inc_db", scheme: "rpt", dropKg: 4, calibratable: true,
-        sets: [s(6, 8, 180, "la pesada"), s(8, 10, 180, "−4 kg por mano"), s(10, 12, 180, "−4 kg por mano")] },
+        sets: [s(6, 8, HEAVY, "la pesada"), s(8, 10, HEAVY, "−4 kg por mano"), s(10, 12, HEAVY, "−4 kg por mano")] },
       { exerciseId: "dip_w", scheme: "rpt", altExerciseId: "bench", calibratable: true,
         note: "Si aún no haces fondos con lastre, usa press de banca.",
-        sets: [s(6, 8, 180, "la pesada"), s(8, 10, 180, DROP), s(10, 12, 150, DROP)] },
+        sets: [s(6, 8, HEAVY, "la pesada"), s(8, 10, HEAVY, DROP), s(10, 12, HEAVY, DROP)] },
       { exerciseId: "tri_oh", scheme: "rpt", dropKg: 2,
-        sets: [s(8, 10, 120, "la pesada"), s(10, 12, 120, "−2 kg por mano"), s(12, 15, 120, "−2 kg por mano")] },
-      { exerciseId: "uprow", scheme: "kino", sets: times(4, s(10, 15, 90)) },
+        sets: [s(8, 10, LIGHT, "la pesada"), s(10, 12, LIGHT, "−2 kg por mano"), s(12, 15, LIGHT, "−2 kg por mano")] },
+      { exerciseId: "uprow", scheme: "kino", sets: times(4, s(10, 15, LIGHT)) },
       { exerciseId: "s2s", scheme: "straight", sets: times(3, s(8, 12, 60, null, "reps_per_side")) },
     ]),
   },
@@ -166,15 +175,15 @@ export const ROUTINES: RoutineTemplate[] = [
     templatePhase: 2, key: "B", name: "Workout B", focus: "Espalda · bíceps · piernas",
     exercises: re([
       { exerciseId: "neg", scheme: "straight", isAddition: true, note: "Añadido, no es del curso: bajar en 5 s.",
-        sets: times(3, s(3, 5, 120)) },
+        sets: times(3, s(3, 5, LIGHT)) },
       { exerciseId: "jal_pr", scheme: "rpt", altExerciseId: "pull_w", calibratable: true,
-        sets: [s(6, 8, 180, "la pesada"), s(8, 10, 180, DROP), s(8, 10, 150, DROP)] },
+        sets: [s(6, 8, HEAVY, "la pesada"), s(8, 10, HEAVY, DROP), s(8, 10, HEAVY, DROP)] },
       { exerciseId: "curl_inc", scheme: "rpt", dropKg: 2, calibratable: true,
-        sets: [s(6, 8, 120, "la pesada"), s(6, 8, 120, "−2 kg por mano"), s(6, 8, 120, "−2 kg por mano")] },
-      { exerciseId: "box", scheme: "kino", calibratable: true, sets: times(5, s(6, 6, 120)) },
-      { exerciseId: "sl_rdl", scheme: "kino", altExerciseId: "hip_thrust", calibratable: true, sets: times(3, s(8, 12, 120)) },
+        sets: [s(6, 8, LIGHT, "la pesada"), s(6, 8, LIGHT, "−2 kg por mano"), s(6, 8, LIGHT, "−2 kg por mano")] },
+      { exerciseId: "box", scheme: "kino", calibratable: true, sets: times(5, s(6, 6, HEAVY)) },
+      { exerciseId: "sl_rdl", scheme: "kino", altExerciseId: "hip_thrust", calibratable: true, sets: times(3, s(8, 12, LIGHT)) },
       { exerciseId: "rdf", scheme: "rest_pause",
-        sets: [s(12, 15, 12, "activación a tope"), s(4, 6, 12, "mini-serie 1"), s(4, 6, 12, "mini-serie 2"), s(4, 6, 90, "mini-serie 3")] },
+        sets: [s(12, 15, 12, "activación a tope"), s(4, 6, 12, "mini-serie 1"), s(4, 6, 12, "mini-serie 2"), s(4, 6, LIGHT, "mini-serie 3")] },
     ]),
   },
   { templatePhase: 2, key: "C", name: "Cardio + abs", focus: "Sábado · día sin pesas", exercises: C_EXERCISES },
@@ -199,8 +208,8 @@ export function resolveRoutine(r: RoutineTemplate): ResolvedExercise[] {
 /** Grupos de la pestaña Fuerza (todos los ejercicios con carga o reps; los de tiempo —cardio, puente— no). */
 export const STRENGTH_GROUPS: { key: string; name: string; ids: string[] }[] = [
   { key: "basicos", name: "Básicos", ids: ["inc", "ohp", "jal", "inc_db", "dip_w", "bench", "jal_pr", "chin_w", "pull_w"] },
-  { key: "piernas", name: "Piernas", ids: ["bul", "rdl", "box", "sl_rdl", "hip_thrust"] },
-  { key: "accesorios", name: "Accesorios", ids: ["tri", "tri_oh", "ham", "curl_inc", "lat", "uprow", "rdf", "fp"] },
+  { key: "piernas", name: "Piernas", ids: ["sq", "bul", "rdl", "box", "sl_rdl", "hip_thrust"] },
+  { key: "accesorios", name: "Accesorios", ids: ["tri", "tri_oh", "ham", "curl_inc", "lat", "uprow", "rdf", "sapd", "fp"] },
   { key: "core", name: "Peso corporal y core", ids: ["neg", "knee", "hlr", "s2s", "whl"] },
 ];
 export const STRENGTH_IDS: string[] = STRENGTH_GROUPS.flatMap((g) => g.ids);

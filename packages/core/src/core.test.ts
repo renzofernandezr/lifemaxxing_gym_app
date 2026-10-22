@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  autoregulate,
   bodyComp,
   calibrate,
   checkinFeedback,
@@ -17,10 +18,12 @@ import {
   programPosition,
   propagateWeightChange,
   resolveExercise,
+  restText,
   round,
   routineTemplate,
   ROUTINES,
   setsText,
+  stepFrom,
   stepOf,
   suggestNext,
   warmups,
@@ -29,9 +32,10 @@ import {
 } from "./index";
 
 const get = (phase: number, key: "A" | "B" | "C", id: string) => {
-  const t = routineTemplate(phase, key).exercises.find((e) => e.exerciseId === id);
+  const t = routineTemplate(phase, key).exercises.find((e) => e.exerciseId === id || e.altExerciseId === id);
   if (!t) throw new Error(id);
-  return resolveExercise(t);
+  const r = resolveExercise(t);
+  return t.exerciseId === id ? r : { ...r, exerciseId: id, exercise: EXERCISES.find((e) => e.id === id)! };
 };
 
 describe("Epley", () => {
@@ -62,8 +66,11 @@ describe("calibración", () => {
     expect(r.loads).toEqual([62.5, 57.5, 52.5]);
     expect(r.reliable).toBe(true);
   });
-  it("búlgara 12 × 8, RIR 1 → rampa 6 / 8 / 10 / 12", () => {
+  it("búlgara (alternativa) 12 × 8, RIR 1 → rampa 6 / 8 / 10 / 12", () => {
     expect(calibrate(get(1, "B", "bul"), { weightKg: 12, reps: 8, rir: 1 }).loads).toEqual([6, 8, 10, 12]);
+  });
+  it("sentadilla con barra 40 × 8, RIR 1 → rampa 25 / 30 / 35 / 40", () => {
+    expect(calibrate(get(1, "B", "sq"), { weightKg: 40, reps: 8, rir: 1 }).loads).toEqual([25, 30, 35, 40]);
   });
   it("curl martillo (drop 2) 14 × 8, RIR 2 → 14 / 12 / 10", () => {
     expect(calibrate(get(1, "B", "ham"), { weightKg: 14, reps: 8, rir: 2 }).loads).toEqual([14, 12, 10]);
@@ -160,16 +167,31 @@ describe("doble progresión", () => {
     expect(suggestNext(get(1, "A", "inc"), last)).toEqual([62.5, 55, 50]);
   });
   it("Kino: sube todas solo si todas llegan al tope", () => {
-    const ex = get(1, "B", "bul");
-    const all = [6, 8, 10, 12].map((w) => ({ weightKg: w, reps: 8 }));
-    expect(suggestNext(ex, all)).toEqual([8, 10, 12, 14]);
-    const notAll = [...all.slice(0, 3), { weightKg: 12, reps: 7 }];
-    expect(suggestNext(ex, notAll)).toEqual([6, 8, 10, 12]);
+    const ex = get(1, "B", "sq");
+    const all = [25, 30, 35, 40].map((w) => ({ weightKg: w, reps: 8 }));
+    expect(suggestNext(ex, all)).toEqual([27.5, 32.5, 37.5, 42.5]);
+    const notAll = [...all.slice(0, 3), { weightKg: 40, reps: 7 }];
+    expect(suggestNext(ex, notAll)).toEqual([25, 30, 35, 40]);
   });
-  it("rest-pause: 15 + 6 + 6 + 6 → +1 kg", () => {
+  it("Kino: la serie que quedó por debajo del mínimo baja un incremento; la que no se hizo, no", () => {
+    const ex = get(1, "B", "sq");
+    expect(suggestNext(ex, [[25, 8], [30, 8], [35, 7], [40, 5]].map(([weightKg, reps]) => ({ weightKg, reps })))).toEqual([25, 30, 35, 37.5]);
+    expect(suggestNext(ex, [[40, 8], [40, 8], [40, 8], [40, 0]].map(([weightKg, reps]) => ({ weightKg, reps })))).toEqual([40, 40, 40, 40]);
+  });
+  it("RPT: 3 reps sobre el tope → +2 incrementos; por debajo del mínimo → −1", () => {
+    const last = [[60, 8], [55, 3], [50, 9]].map(([weightKg, reps]) => ({ weightKg, reps }));
+    expect(suggestNext(get(1, "A", "inc"), last)).toEqual([65, 52.5, 50]);
+  });
+  it("mancuernas: nunca baja de un paso (2 kg)", () => {
+    const last = [[2, 3], [2, 3], [2, 3]].map(([weightKg, reps]) => ({ weightKg, reps }));
+    expect(suggestNext(get(1, "B", "ham"), last)).toEqual([2, 2, 2]);
+  });
+  it("rest-pause: 15 + 6 + 6 + 6 → +2 kg (mancuernas de 2 en 2)", () => {
     const ex = get(1, "A", "lat");
     const done = [15, 6, 6, 6].map((reps) => ({ weightKg: 8, reps }));
-    expect(suggestNext(ex, done)).toEqual([9, 9, 9, 9]);
+    expect(suggestNext(ex, done)).toEqual([10, 10, 10, 10]);
+    const weak = [10, 4, 4, 3].map((reps) => ({ weightKg: 8, reps }));
+    expect(suggestNext(ex, weak)).toEqual([6, 6, 6, 6]);
   });
   it("calentamientos del inclinado y default", () => {
     expect(warmups(get(1, "A", "inc"), 62.5).map((w) => w.weightKg)).toEqual([32.5, 45, 50]);
@@ -179,6 +201,7 @@ describe("doble progresión", () => {
     expect(propagateWeightChange("rpt", get(1, "A", "inc"), [62.5, 57.5, 52.5], 0, 60)).toEqual([60, 55, 50]);
     expect(propagateWeightChange("rpt", get(1, "B", "ham"), [14, 12, 10], 0, 16)).toEqual([16, 14, 12]);
     expect(propagateWeightChange("kino", get(1, "B", "bul"), [6, 8, 10, 12], 1, 10)).toEqual([6, 10, 12, 14]);
+    expect(propagateWeightChange("kino", get(1, "B", "sq"), [25, 30, 35, 40], 1, 32.5)).toEqual([25, 32.5, 37.5, 42.5]);
     expect(propagateWeightChange("rest_pause", get(1, "A", "lat"), [8, 8, 8, 8], 0, 9)).toEqual([9, 9, 9, 9]);
   });
   it("récords", () => {
@@ -186,6 +209,35 @@ describe("doble progresión", () => {
     expect(isRecord([{ weightKg: 62.5, reps: 5 }], h)).toBe(true);
     expect(isRecord([{ weightKg: 60, reps: 5 }], h)).toBe(false);
     expect(isRecord([{ weightKg: 60, reps: 5 }], [])).toBe(false);
+  });
+});
+
+describe("ajuste del mismo día", () => {
+  it("pasarse del tope sube las series siguientes (la pirámide nunca sube sobre la anterior)", () => {
+    const r = autoregulate(get(1, "A", "inc"), [62.5, 57.5, 52.5], 0, { weightKg: 62.5, reps: 7 });
+    expect(r).toEqual({ weights: [62.5, 60, 55], dir: 1 });
+    const capped = autoregulate(get(1, "A", "inc"), [57.5, 57.5, 52.5], 0, { weightKg: 57.5, reps: 9 });
+    expect(capped.weights[1]).toBeLessThanOrEqual(57.5);
+  });
+  it("quedarse corto baja las siguientes al menos un paso (mancuernas de 2 en 2)", () => {
+    expect(autoregulate(get(1, "B", "ham"), [10, 8, 6], 0, { weightKg: 10, reps: 3 })).toEqual({ weights: [10, 6, 4], dir: -1 });
+  });
+  it("dentro del rango no cambia nada; las series hechas tampoco", () => {
+    expect(autoregulate(get(1, "B", "jal"), [61, 55, 50], 0, { weightKg: 61, reps: 7 })).toEqual({ weights: [61, 55, 50], dir: 0 });
+    const r = autoregulate(get(1, "B", "sq"), [40, 40, 40, 40], 0, { weightKg: 40, reps: 11 }, (j) => j === 1);
+    expect(r.weights).toEqual([40, 40, 42.5, 42.5]);
+  });
+  it("rest-pause y peso corporal sin lastre no se ajustan", () => {
+    expect(autoregulate(get(1, "A", "lat"), [8, 8, 8, 8], 0, { weightKg: 8, reps: 20 }).dir).toBe(0);
+    expect(autoregulate(get(1, "B", "neg"), [0, 0, 0], 0, { weightKg: 0, reps: 8 }).dir).toBe(0);
+  });
+  it("los botones − y + caen en la grilla del equipo", () => {
+    expect(stepFrom(9, 2, 1)).toBe(10);
+    expect(stepFrom(9, 2, -1)).toBe(8);
+    expect(stepFrom(10, 2, 1)).toBe(12);
+    expect(stepFrom(42.5, 2.5, -1)).toBe(40);
+    expect(stepFrom(41, 2.5, 1)).toBe(42.5);
+    expect(stepFrom(1, 2, -1)).toBe(0);
   });
 });
 
@@ -219,6 +271,9 @@ describe("datos del programa", () => {
     expect(setsText(get(1, "A", "inc"))).toBe("3 × 4–5, 6–7, 8–10");
     expect(setsText(get(1, "A", "lat"))).toBe("1 × 12–15 + 3 × 4–6");
     expect(setsText(get(1, "C", "car"))).toBe("40–60 min");
+    expect(restText(get(1, "A", "inc"))).toBe("2 min");
+    expect(restText(get(1, "A", "tri"))).toBe("1:30 min");
+    expect(restText(get(1, "A", "knee"))).toBe("1 min");
     expect(fk(62.5)).toBe("62.5");
     expect(fk(57.4999999)).toBe("57.5");
   });

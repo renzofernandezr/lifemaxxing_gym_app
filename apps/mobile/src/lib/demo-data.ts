@@ -84,8 +84,10 @@ const BASE: Record<string, { w: number; cadence: number }> = {
   neg: { w: 0, cadence: 3 },
   jal: { w: 57.5, cadence: 2 },
   ham: { w: 12, cadence: 3 },
+  sq: { w: 40, cadence: 2 },
   bul: { w: 12, cadence: 3 },
   rdl: { w: 20, cadence: 3 },
+  sapd: { w: 25, cadence: 3 },
   fp: { w: 25, cadence: 3 },
   car: { w: 0, cadence: 2 },
   hlr: { w: 0, cadence: 3 },
@@ -110,6 +112,7 @@ const SHORT: Record<string, string> = {
   inc: "Inclinado",
   ohp: "Militar",
   jal: "Jalón supino",
+  sq: "Sentadilla",
   bul: "Búlgara",
   inc_db: "Inclinado mancuernas",
   dip_w: "Fondos",
@@ -245,7 +248,7 @@ function nextText(ex: ResolvedExercise, next: number[], best: DoneSet | null): s
   if (!ex.exercise.incrementKg || (next.length && next.every((w) => w <= 0))) return "Próxima: busca una rep más por serie";
   if (!next.length) return "";
   if (ex.scheme === "rpt") return `Próxima: ${next.map(fk).join(" · ")} kg`;
-  if (ex.scheme === "kino") return `Próxima: ${fk(next[0])} → ${fk(next[next.length - 1])} kg`;
+  if (ex.scheme === "kino" && next[0] !== next[next.length - 1]) return `Próxima: ${fk(next[0])} → ${fk(next[next.length - 1])} kg`;
   return `Próxima: ${fk(next[0])} kg`;
 }
 

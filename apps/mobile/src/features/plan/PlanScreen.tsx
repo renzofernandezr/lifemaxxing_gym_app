@@ -684,15 +684,19 @@ function Reglas() {
   const rules: [string, string][] = [
     [
       "Doble progresión",
-      "Trabajas dentro de un rango. Cuando llegas al tope en una serie, la próxima sesión subes 2.5 kg en barra (2 kg en mancuernas) y vuelves a la parte baja del rango. Meta: +4 a +7 kg al mes en los básicos.",
+      "Trabajas dentro de un rango. Cuando llegas al tope en una serie, la próxima sesión subes 2.5 kg en barra y polea (2 kg en mancuernas, que van de 2 en 2) y vuelves a la parte baja del rango. Si pasas el tope por 3 reps o más, subes el doble; si no llegas al mínimo, bajas un salto. Meta: +4 a +7 kg al mes en los básicos.",
+    ],
+    [
+      "Ajuste en la misma sesión",
+      "Si en una serie pasas el tope del rango, la app sube el peso de las series que siguen de ese ejercicio; si no llegas al mínimo, lo baja. Siempre te dice cuánto y por qué.",
     ],
     [
       "La serie pesada primero",
       "En pirámide inversa la serie 1 va a una rep del fallo. Luego bajas ~10 % y buscas 1–2 reps más. Ninguna otra serie se lleva al fallo.",
     ],
     [
-      "Descansos completos",
-      "3 min entre series de básicos, 4–5 min después del press inclinado, 2 min en accesorios y piernas, 10–15 s entre mini-series de rest-pause. La app te los cuenta.",
+      "Descansos justos",
+      "2 min en los básicos pesados (press, jalón, sentadilla), 1:30 en accesorios y peso muerto rumano, 1 min en abdominales y 10–15 s entre mini-series de rest-pause. La app te los cuenta.",
     ],
     [
       "Del jalón a las dominadas",

@@ -52,7 +52,10 @@ export function setsText(ex: Pick<ResolvedExercise, "scheme" | "sets">): string 
 export function restText(ex: Pick<ResolvedExercise, "scheme" | "sets">): string {
   if (ex.scheme === "rest_pause") return "10–15 s";
   const s = ex.sets[0]?.restSec ?? 0;
-  return s >= 120 ? `${fk(s / 60)} min` : `${s} s`;
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r ? `${m}:${String(r).padStart(2, "0")} min` : `${m} min`;
 }
 
 export function secondsText(sec: number): string {

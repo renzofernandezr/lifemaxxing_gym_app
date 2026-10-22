@@ -13,7 +13,13 @@ describe("migraciones", () => {
       expect(r.applied).toEqual([]);
       expect(r.skipped).toContain("0001_init");
       const { rows } = await c.query("select count(*)::int n from exercises");
-      expect(rows[0].n).toBe(29);
+      expect(rows[0].n).toBe(31);
+      const b = await c.query(
+        `select re.position, re.exercise_id, re.alt_exercise_id from routine_exercises re join routines r on r.id = re.routine_id
+          where r.template_phase = 1 and r.key = 'B' order by re.position`,
+      );
+      expect(b.rows.map((x) => x.exercise_id)).toEqual(["neg", "jal", "ham", "sq", "rdl", "sapd"]);
+      expect(b.rows[3].alt_exercise_id).toBe("bul");
       const sets = await c.query("select count(*)::int n from routine_sets");
       expect(sets.rows[0].n).toBeGreaterThan(80);
     } finally {

@@ -26,6 +26,18 @@ export function round(weightKg: number, step: number): number {
   return clean(Math.round(weightKg / step + EPS) * step);
 }
 
+/**
+ * Paso de los botones − y +: desde un valor fuera de la grilla (p. ej. 9 kg en mancuernas de 2 en 2)
+ * va al múltiplo más cercano en esa dirección; desde uno en la grilla, un paso entero.
+ */
+export function stepFrom(weightKg: number, step: number, dir: -1 | 1): number {
+  if (step <= 0) return clean(Math.max(0, weightKg));
+  const q = weightKg / step;
+  const onGrid = Math.abs(q - Math.round(q)) < 1e-6;
+  const next = onGrid ? Math.round(q) + dir : dir > 0 ? Math.ceil(q) : Math.floor(q);
+  return clean(Math.max(0, next * step));
+}
+
 /** Peso mínimo de una serie: 0 en peso corporal (sin lastre), un paso en el resto. */
 export function minLoad(ex: { equipment: Equipment; incrementKg?: number | null }): number {
   return ex.equipment === "peso_corporal" || ex.equipment === "rueda" ? 0 : stepOf(ex);
@@ -91,19 +103,88 @@ export function calibrate(ex: ResolvedExercise, test: CalibrationTest): Calibrat
   return { e1rmKg: clean(e), loads: loadsFromE1rm(ex, e), reliable: test.reps >= 3 && test.reps <= 10 };
 }
 
+/** Reps por encima del tope con las que se suben dos incrementos de una vez. */
+const BIG_JUMP_REPS = 3;
+
 /**
- * Doble progresión.
- * - RPT: por serie, si llegaste al tope del rango → +incremento en esa serie.
- * - Kino, rest-pause y rectas: si todas las series llegaron al tope → +incremento en todas.
- * Las series que faltan en `lastSets` se ignoran (la salida tiene el largo de `lastSets`).
+ * Doble progresión, también hacia abajo.
+ * - RPT, por serie: tope del rango → +1 incremento (3 o más reps sobre el tope → +2);
+ *   por debajo del mínimo → −1 incremento; dentro del rango → mismo peso.
+ * - Kino, rest-pause y rectas: si todas las series llegaron al tope → +1 incremento en todas (+2 si todas pasaron
+ *   el tope por 3 o más). Si no: en Kino y rectas baja 1 incremento cada serie que quedó por debajo del mínimo;
+ *   en rest-pause baja todo si la activación quedó por debajo (es un solo peso).
+ * Una serie con 0 reps es una serie que no se hizo: no sube ni baja. La salida tiene el largo de `lastSets`.
  */
 export function suggestNext(ex: ResolvedExercise, lastSets: DoneSet[]): number[] {
   const inc = ex.exercise.incrementKg;
+  const floor = minLoad(ex.exercise);
+  const up = (w: number, n: number) => clean(w + n * inc);
+  const down = (w: number) => (w <= floor ? w : clean(Math.max(floor, w - inc)));
+  const below = (l: DoneSet, i: number) => !!ex.sets[i] && l.reps > 0 && l.reps < ex.sets[i].repsMin;
+  if (!inc) return lastSets.map((l) => l.weightKg);
   if (ex.scheme === "rpt") {
-    return lastSets.map((l, i) => clean(l.weightKg + (ex.sets[i] && l.reps >= ex.sets[i].repsMax ? inc : 0)));
+    return lastSets.map((l, i) => {
+      const t = ex.sets[i];
+      if (!t) return l.weightKg;
+      if (l.reps >= t.repsMax + BIG_JUMP_REPS) return up(l.weightKg, 2);
+      if (l.reps >= t.repsMax) return up(l.weightKg, 1);
+      return below(l, i) ? down(l.weightKg) : l.weightKg;
+    });
   }
   const all = lastSets.length > 0 && lastSets.every((l, i) => !ex.sets[i] || l.reps >= ex.sets[i].repsMax);
-  return lastSets.map((l) => clean(l.weightKg + (all ? inc : 0)));
+  if (all) {
+    const big = lastSets.every((l, i) => !ex.sets[i] || l.reps >= ex.sets[i].repsMax + BIG_JUMP_REPS);
+    return lastSets.map((l) => up(l.weightKg, big ? 2 : 1));
+  }
+  if (ex.scheme === "rest_pause") return lastSets.map((l) => (lastSets[0] && below(lastSets[0], 0) ? down(l.weightKg) : l.weightKg));
+  return lastSets.map((l, i) => (below(l, i) ? down(l.weightKg) : l.weightKg));
+}
+
+export interface Autoregulation {
+  /** Pesos de todas las series de trabajo del ejercicio (las hechas no cambian). */
+  weights: number[];
+  /** +1 si se subió alguna serie siguiente, −1 si se bajó, 0 si nada cambió. */
+  dir: -1 | 0 | 1;
+}
+
+/**
+ * Ajuste del mismo día: compara la serie `k` recién hecha con su rango de reps y corrige las series siguientes
+ * del ejercicio. Por encima del tope suben y por debajo del mínimo bajan, en proporción al 1RM que mostró esa
+ * serie (Epley) y como mínimo un paso del equipo. En pirámide ninguna serie supera a la anterior.
+ * Solo para pirámide, Kino y rectas con peso (rest-pause usa un único peso; el cardio y el tiempo no aplican).
+ */
+export function autoregulate(
+  ex: ResolvedExercise,
+  planned: number[],
+  k: number,
+  done: DoneSet,
+  isDone: (j: number) => boolean = () => false,
+): Autoregulation {
+  const out = planned.slice();
+  const t = ex.sets[k];
+  const same = { weights: out, dir: 0 as const };
+  if (!t || t.unit === "sec" || t.unit === "min") return same;
+  if (ex.scheme !== "rpt" && ex.scheme !== "kino" && ex.scheme !== "straight") return same;
+  if (done.reps <= 0 || done.weightKg <= 0 || (done.reps >= t.repsMin && done.reps <= t.repsMax)) return same;
+  out[k] = done.weightKg;
+  const dir = done.reps > t.repsMax ? 1 : -1;
+  const ref = dir > 0 ? t.repsMax : t.repsMin;
+  const factor = (1 + done.reps / 30) / (1 + ref / 30);
+  const st = stepOf(ex.exercise);
+  const floor = minLoad(ex.exercise);
+  let changed = false;
+  for (let j = k + 1; j < out.length; j++) {
+    if (isDone(j) || out[j] <= 0) continue;
+    let w = round(out[j] * factor, st);
+    if (w === out[j]) w = clean(out[j] + dir * st);
+    w = Math.max(floor, w);
+    if (ex.scheme === "rpt") w = Math.min(w, out[j - 1]);
+    if (w !== out[j]) {
+      out[j] = w;
+      changed = true;
+    }
+  }
+  return { weights: out, dir: changed ? dir : 0 };
 }
 
 /** ¿Llegó al tope en alguna serie (RPT) o en todas (resto)? */
@@ -185,7 +266,7 @@ export function propagateWeightChange(
     }
   } else if (scheme === "kino") {
     const d = newWeight - old;
-    for (let k = changedIndex + 1; k < out.length; k++) out[k] = Math.max(0, clean(out[k] + d));
+    for (let k = changedIndex + 1; k < out.length; k++) out[k] = Math.max(0, round(out[k] + d, st));
   } else if (scheme === "rest_pause") {
     for (let k = changedIndex + 1; k < out.length; k++) out[k] = newWeight;
   }
