@@ -1,0 +1,76 @@
+// Vista Progreso: Resumen · Peso y grasa · Fuerza · Constancia · Historial, en sub-pestañas (móvil y escritorio).
+import { programPosition } from "@lifemaxxing/core";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Platform, RefreshControl } from "react-native";
+import { PanesScreen } from "../../components/panes";
+import { ViewHead } from "../../components/ui";
+import { useTheme } from "../../theme/theme";
+import { BodyPane } from "./Body";
+import { CheckinSheet } from "./CheckinSheet";
+import { ConsistencyPane } from "./Consistency";
+import { HistoryPane } from "./History";
+import { StrengthPane } from "./Strength";
+import { SummaryPane } from "./Summary";
+import { longDate, useProfileDates } from "./util";
+
+type PaneKey = "resumen" | "cuerpo" | "fuerza" | "constancia" | "historial";
+const TABS: { key: PaneKey; label: string }[] = [
+  { key: "resumen", label: "Resumen" },
+  { key: "cuerpo", label: "Peso y grasa" },
+  { key: "fuerza", label: "Fuerza" },
+  { key: "constancia", label: "Constancia" },
+  { key: "historial", label: "Historial" },
+];
+
+export function ProgressScreen() {
+  const { c } = useTheme();
+  const { start, tz } = useProfileDates();
+  const qc = useQueryClient();
+  const [sheet, setSheet] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const pos = programPosition(new Date(), start, tz);
+  const eyebrow = pos.beforeStart ? `Empiezas el ${longDate(start)}` : pos.finished ? "Programa completo" : `Semana ${pos.week} de 24`;
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await qc.refetchQueries({ type: "active" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  const openCheckin = () => setSheet(true);
+
+  const render = (k: PaneKey) => {
+    switch (k) {
+      case "resumen":
+        return <SummaryPane onRegister={openCheckin} />;
+      case "cuerpo":
+        return <BodyPane onRegister={openCheckin} />;
+      case "fuerza":
+        return <StrengthPane />;
+      case "constancia":
+        return <ConsistencyPane />;
+      default:
+        return <HistoryPane />;
+    }
+  };
+
+  return (
+    <>
+      <PanesScreen
+        refreshControl={
+          Platform.OS === "web" ? undefined : (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} colors={[c.accent]} />
+          )
+        }
+        head={<ViewHead eyebrow={eyebrow} title="Tu progreso" />}
+        tabs={TABS}
+        label="Secciones de progreso"
+        render={render}
+      />
+      <CheckinSheet open={sheet} onClose={() => setSheet(false)} />
+    </>
+  );
+}

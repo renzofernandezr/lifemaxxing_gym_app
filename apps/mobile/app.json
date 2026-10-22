@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "Life Maxxing",
+    "slug": "lifemaxxing-gym",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "lifemaxxing",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/icon-ios.png",
+      "bundleIdentifier": "com.renzofernandez.lifemaxxinggym",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.renzofernandez.lifemaxxinggym"
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Life Maxxing",
+      "shortName": "Life Maxxing",
+      "lang": "es-PE",
+      "themeColor": "#FF6600",
+      "backgroundColor": "#F5F5F5",
+      "description": "Bitácora de gimnasio: Greek God 2.0 adaptado"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F5F5",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96,
+          "dark": {
+            "backgroundColor": "#252C2E"
+          }
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-font",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "22fdf9a2-a1c1-45a3-b7f2-aec14b9ba6ca"
+      }
+    },
+    "owner": "renzofernandezg"
+  }
+}
