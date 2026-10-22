@@ -85,14 +85,15 @@
 - Desde el 21-oct se usa Render en lugar de Railway, por pedido de Renzo, todo en plan gratis. No cambies de proveedor ni de plan sin que lo pida; tampoco Fly ni Neon.
 - **Recursos** (workspace "Renzo's Workspace", región Virginia, sin proyecto de Render):
   - Postgres `lifemaxxing-gym-db` (`dpg-dbcljh8m7kps73c4sum0-a`), free, Postgres 18. Sin IPs permitidas: solo acepta la red privada de Render.
-  - Web `lifemaxxing-gym` (`srv-dbclk5q9lscs73eapu20`), free, Docker (`Dockerfile`), healthcheck `/api/health`. Auto-deploy en cada commit a `feat/app-rn`; ignora `docs/**` y `**/*.md`.
+  - Web `lifemaxxing-gym` (`srv-dbclk5q9lscs73eapu20`), free, Docker (`Dockerfile`), healthcheck `/api/health`, rama `feat/app-rn`.
+  - **El auto-deploy no se dispara**, porque el repo se conectó como URL pública, sin la app de GitHub de Render. Después de cada push que toque código hay que correr `scripts/render-setup.sh deploy`. Si Renzo conecta GitHub en Render, el auto-deploy ya configurado debería funcionar (ignora `docs/**` y `**/*.md`).
   - Las migraciones corren al arrancar el contenedor.
   - El workspace también tiene `RoyalDB_api`, que no es de este proyecto. No lo toques.
 - **Límites del plan gratis**:
   - La web se duerme tras 15 min sin tráfico y tarda ~1 min en despertar.
   - Las 750 h gratis al mes son de todo el workspace.
   - La Postgres no tiene backups y **caduca el 21-nov-2026**. Hay 14 días de gracia para pasarla a pago; si no, Render la borra con todos los datos. Avísale a Renzo antes de esa fecha.
-- **Script**: `scripts/render-setup.sh db | app | wait | users | smoke`. No imprime secretos y solo toca recursos `lifemaxxing-gym*`.
+- **Script**: `scripts/render-setup.sh db | app | deploy | wait | users | smoke`. No imprime secretos y solo toca recursos `lifemaxxing-gym*`.
   - La CLI no cambia variables de entorno de un servicio. Para eso: dashboard → `lifemaxxing-gym` → Environment.
 - **Útil**:
   - `render deploys list srv-dbclk5q9lscs73eapu20 -o json`

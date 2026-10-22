@@ -4,6 +4,7 @@
 #
 #   scripts/render-setup.sh db       # crea la Postgres gratis lifemaxxing-gym-db (si no existe)
 #   scripts/render-setup.sh app      # crea el servicio web lifemaxxing-gym con DATABASE_URL interna (si no existe)
+#   scripts/render-setup.sh deploy   # despliega el último commit de feat/app-rn (hay que pushear antes)
 #   scripts/render-setup.sh wait     # espera el último deploy, prueba /api/health y escribe apps/mobile/.env.production
 #   scripts/render-setup.sh users    # usuario de production (contraseña aleatoria en .secrets/credenciales.txt)
 #   scripts/render-setup.sh smoke    # smoke test contra production (limpia sus datos al terminar)
@@ -60,6 +61,15 @@ cmd_app() {
     --env-var "DATABASE_URL=$url" --env-var NODE_ENV=production \
     --env-var "ALLOWED_EMAILS=$EMAIL" --env-var SESSION_TTL_DAYS=30 \
     -o json | jq -r '"  ✓ creado (\(.id)) → \(.serviceDetails.url)"'
+}
+
+# El auto-deploy no se dispara: el repo está conectado como URL pública, sin la app de GitHub de Render.
+cmd_deploy() {
+  local id
+  id="$(app_id)"
+  [[ -n "$id" ]] || die "No existe el servicio $APP_NAME"
+  say "Deploy de $APP_NAME ($BRANCH)"
+  render deploys create "$id" --wait --confirm -o text | tail -1
 }
 
 cmd_wait() {
@@ -120,9 +130,10 @@ cmd_smoke() {
 case "${1:-}" in
   db) cmd_db ;;
   app) cmd_app ;;
+  deploy) cmd_deploy; cmd_wait ;;
   wait) cmd_wait ;;
   users) cmd_users ;;
   smoke) cmd_smoke ;;
   all) cmd_db; cmd_app; cmd_wait; cmd_users; cmd_smoke ;;
-  *) sed -n '2,11p' "$0"; exit 1 ;;
+  *) sed -n '2,12p' "$0"; exit 1 ;;
 esac
