@@ -45,6 +45,7 @@
 - **iPhone con Expo Go** (versión de la App Store, SDK 57). El teléfono y la PC deben estar en la misma Wi-Fi; luego se escanea el QR con la cámara. Dos modos:
   - `pnpm --filter mobile demo`: 8 semanas de historial; arranca en la semana 8, la última de la Fase 1.
   - `pnpm --filter mobile demo:nuevo`: usuario nuevo en la semana 1, sin 1RM. Las primeras sesiones A y B traen las series de prueba para medirlo.
+  - **Con datos reales**: `cd apps/mobile && npx expo start --lan`. `.env.development` apunta a la API de Render, que es production: son los datos reales de Renzo. La web local (`pnpm --filter mobile web`) no puede usar esa API por CORS y cookies, así que ahí solo funciona el modo demo.
 - **Web**: `pnpm --filter mobile web` y abrir `http://localhost:8081/progreso?demo=1` (o `?demo=nuevo`).
 - **Cómo funciona por dentro**:
   - `src/lib/demo.ts` lee `EXPO_PUBLIC_DEMO` (`1`/`historial` o `nuevo`; en web, también `?demo=`).
@@ -114,10 +115,12 @@
   - Sin capa encima y sin puntos extra en el indicador.
   - Anillo fino y plano, nada 3D ni grueso.
   - Fuera de la sesión aparece una barra flotante que lleva de vuelta.
-- **Progreso y Plan**: el título y las sub-pestañas quedan fijos y solo hace scroll el contenido. Sin margen grande al final.
+- **Progreso y Plan**: el título y las sub-pestañas quedan fijos y solo hace scroll el contenido. Sin margen grande al final. Funciona igual en escritorio: también hay sub-pestañas, no todas las secciones apiladas.
 - **Fuerza**: muestra todos los ejercicios agrupados, cada uno con su mejora y una mini gráfica.
 - **Cabecera**: sin botón de tema; el tema se cambia en Ajustes.
 - **Ajustes**: lista agrupada (nombre, altura, peso meta, inicio del programa; tema; cerrar sesión), sin "Peso inicial". El nombre y el correo van bien separados. "Guardar cambios" solo aparece si hay cambios.
+  - En escritorio: encabezado como en Progreso y Plan, y dos columnas. A la izquierda, la cuenta (tarjeta con "Cerrar sesión") y Apariencia; a la derecha, el Perfil. Enter guarda y Esc cierra.
+- **Ícono de iOS y Android**: el disco naranja sobre fondo blanco, con el agujero blanco y el anillo café. Lo genera `apps/mobile/scripts/gen-icons.mjs`; `icon-ios.png` va sin canal alfa. El splash y el favicon no cambian.
 - **Hápticos**: toque suave en los botones y vibración larga (~3 s en iOS) al terminar el descanso.
 - **1RM**: si no hay 1RM, la primera sesión A y la primera B traen series de prueba para medirlo.
 - El detalle y el motivo de cada cambio están en `docs/DECISIONES.md`.
