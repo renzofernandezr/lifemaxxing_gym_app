@@ -1,8 +1,8 @@
-// Vista Progreso: Resumen · Peso y grasa · Fuerza · Constancia · Historial (sub-pestañas en móvil, todo en escritorio).
+// Vista Progreso: Resumen · Peso y grasa · Fuerza · Constancia · Historial, en sub-pestañas (móvil y escritorio).
 import { programPosition } from "@lifemaxxing/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Platform, RefreshControl, View } from "react-native";
+import { Platform, RefreshControl } from "react-native";
 import { PanesScreen } from "../../components/panes";
 import { ViewHead } from "../../components/ui";
 import { useTheme } from "../../theme/theme";
@@ -10,7 +10,6 @@ import { BodyPane } from "./Body";
 import { CheckinSheet } from "./CheckinSheet";
 import { ConsistencyPane } from "./Consistency";
 import { HistoryPane } from "./History";
-import { Pair } from "./layout";
 import { StrengthPane } from "./Strength";
 import { SummaryPane } from "./Summary";
 import { longDate, useProfileDates } from "./util";
@@ -70,17 +69,6 @@ export function ProgressScreen() {
         tabs={TABS}
         label="Secciones de progreso"
         render={render}
-        desktop={(r) => (
-          <>
-            <View style={{ gap: 22 }}>{r("resumen")}</View>
-            <View style={{ gap: 22 }}>{r("cuerpo")}</View>
-            <View style={{ gap: 22 }}>{r("fuerza")}</View>
-            <Pair gap={22}>
-              <View style={{ gap: 16 }}>{r("constancia")}</View>
-              <View style={{ gap: 16 }}>{r("historial")}</View>
-            </Pair>
-          </>
-        )}
       />
       <CheckinSheet open={sheet} onClose={() => setSheet(false)} />
     </>
