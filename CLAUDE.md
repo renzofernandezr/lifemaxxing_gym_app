@@ -121,7 +121,7 @@
   - En escritorio: encabezado como en Progreso y Plan, y dos columnas. A la izquierda, la cuenta (tarjeta con "Cerrar sesión") y Apariencia; a la derecha, el Perfil. Enter guarda y Esc cierra.
 - **Ícono de iOS y Android**: el disco naranja sobre fondo blanco, con el agujero blanco y el anillo café. Lo genera `apps/mobile/scripts/gen-icons.mjs`; `icon-ios.png` va sin canal alfa. El splash y el favicon no cambian.
 - **Hápticos**: toque suave en los botones y vibración larga (~3 s en iOS) al terminar el descanso.
-- **1RM**: si no hay 1RM, la primera sesión A y la primera B traen series de prueba para medirlo.
+- **1RM**: si no hay 1RM, la primera sesión A y la primera B traen series de prueba para medirlo. El resultado se muestra en una tarjeta naranja bien visible, con el 1RM grande y las cargas de hoy, en la serie de prueba y en el descanso que la sigue.
 - El detalle y el motivo de cada cambio están en `docs/DECISIONES.md`.
 
 ## Cómo trabaja Renzo
