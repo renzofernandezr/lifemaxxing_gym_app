@@ -1,7 +1,7 @@
 // Sesión "una serie a la vez" (estilo Fitbod / Apple Fitness): solo la serie actual en grande,
 // el resto (lista de ejercicios, técnica, alternativa) en hojas inferiores.
 import { calibrate, EQUIPMENT_NAME, fk, SCHEME_NAME, setsText, weightText, type LoadSuggestion } from "@lifemaxxing/core";
-import { Platform, Pressable, TextInput, View, type TextStyle } from "react-native";
+import { Platform, Pressable, Text, TextInput, View, type TextStyle } from "react-native";
 import { IconCheck, IconMinus, IconPlus } from "../../components/icons";
 import { OneRmCard } from "../../components/onerm";
 import { platesText } from "../../components/plates";
@@ -97,6 +97,7 @@ export function BigValue({
   decimal?: boolean;
 }) {
   const { c, scheme } = useTheme();
+  const numStyle: TextStyle = { fontFamily: F.extrabold, fontSize: 52, padding: 0, fontVariant: ["tabular-nums"] };
   return (
     <View
       style={{
@@ -118,17 +119,29 @@ export function BigValue({
     >
       <RoundBtn dir={-1} onPress={() => onStep(-1)} label={`Menos ${label}`} />
       <View style={{ flex: 1, flexDirection: "row", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={decimal ? "decimal-pad" : "number-pad"}
-          selectTextOnFocus
-          accessibilityLabel={label}
-          style={[
-            { fontFamily: F.extrabold, fontSize: 52, color: c.fg, textAlign: "right", minWidth: 40, padding: 0, fontVariant: ["tabular-nums"] },
-            Platform.OS === "web" ? ({ outlineStyle: "none", width: `${Math.max(1, value.length) + 0.3}ch` } as unknown as TextStyle) : null,
-          ]}
-        />
+        {/* El ancho lo da un texto invisible con el mismo valor: en iOS el campo solo no crece y cortaba el decimal (42.5 se veía 42). */}
+        <View style={{ minWidth: 40 }}>
+          <Text
+            aria-hidden
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[numStyle, { opacity: 0, paddingRight: 4 }]}
+          >
+            {value || "0"}
+          </Text>
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            keyboardType={decimal ? "decimal-pad" : "number-pad"}
+            selectTextOnFocus
+            accessibilityLabel={label}
+            style={[
+              numStyle,
+              { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, color: c.fg, textAlign: "right" },
+              Platform.OS === "web" ? ({ outlineStyle: "none" } as unknown as TextStyle) : null,
+            ]}
+          />
+        </View>
         <T style={{ fontFamily: F.bold, fontSize: 17, color: c.muted }}>{unit}</T>
       </View>
       <RoundBtn dir={1} onPress={() => onStep(1)} label={`Más ${label}`} />
