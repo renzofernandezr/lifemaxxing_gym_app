@@ -14,7 +14,7 @@ import {
 } from "@lifemaxxing/core";
 import * as Crypto from "expo-crypto";
 import { router } from "expo-router";
-import { api, ApiError } from "../../lib/api";
+import { api, ApiError, SLOW_TIMEOUT_MS } from "../../lib/api";
 import { invalidateTraining } from "../../lib/queries";
 import { primeRestFeedback, skipRest, startRest } from "../../lib/rest";
 import { flushQueue } from "../../lib/sync";
@@ -46,7 +46,11 @@ export async function startWorkout(routine: RoutineDTO, suggestions: Record<stri
   await primeRestFeedback();
   let session: WorkoutSessionDTO;
   try {
-    session = await api<WorkoutSessionDTO>("/api/sessions", { method: "POST", body: { routineId: routine.id, date: localDate(new Date(), timezone) } });
+    session = await api<WorkoutSessionDTO>("/api/sessions", {
+      method: "POST",
+      body: { routineId: routine.id, date: localDate(new Date(), timezone) },
+      timeoutMs: SLOW_TIMEOUT_MS,
+    });
   } catch (err) {
     if (err instanceof ApiError && err.code === "session_active") {
       throw new StartConflict((err.details as { activeSessionId?: string } | undefined)?.activeSessionId ?? "");
@@ -279,7 +283,7 @@ export async function finishWorkout(): Promise<SessionSummary> {
   if (!ok) throw new SyncPending("Hay series sin sincronizar. Revisa tu conexión e inténtalo de nuevo");
   let summary: SessionSummary;
   try {
-    summary = await api<SessionSummary>(`/api/sessions/${a.sessionId}/finish`, { method: "POST" });
+    summary = await api<SessionSummary>(`/api/sessions/${a.sessionId}/finish`, { method: "POST", timeoutMs: SLOW_TIMEOUT_MS });
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       await clearLocal(a.sessionId);

@@ -1,5 +1,5 @@
 import { Link } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, T } from "../../components/ui";
 import { AuthInput, AuthShell } from "../../features/auth/AuthShell";
 import { ApiError } from "../../lib/api";
@@ -14,6 +14,16 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Si tarda, casi siempre es el servidor gratis despertando (~1 min).
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!busy) {
+      setSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setSlow(true), 5_000);
+    return () => clearTimeout(t);
+  }, [busy]);
 
   const submit = async () => {
     if (!email.trim() || !password) {
@@ -72,6 +82,11 @@ export default function Login() {
         </T>
       ) : null}
       <Button variant="primary" title="Entrar" loading={busy} onPress={submit} style={{ marginTop: 6, borderRadius: 12 }} />
+      {slow ? (
+        <T v="small" muted center accessibilityLiveRegion="polite">
+          Despertando el servidor, puede tardar hasta un minuto…
+        </T>
+      ) : null}
     </AuthShell>
   );
 }

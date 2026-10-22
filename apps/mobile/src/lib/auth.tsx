@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { LoginResponse, MeResponse } from "@lifemaxxing/core";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
 import { useTheme } from "../theme/theme";
-import { api, ApiError, setUnauthorizedHandler } from "./api";
+import { api, ApiError, setUnauthorizedHandler, SLOW_TIMEOUT_MS, wakeApi } from "./api";
 import { IS_NATIVE } from "./config";
 import { isDemo } from "./demo";
 import { qk, queryClient } from "./queries";
@@ -56,6 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("signedOut");
   }, []);
 
+  // Al abrir la app (o volver a ella) se despierta el servidor mientras el usuario escribe o navega.
+  useEffect(() => {
+    wakeApi();
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") wakeApi();
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     setUnauthorizedHandler(() => {
       signOutLocal();
@@ -103,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const r = await api<LoginResponse>("/api/auth/login", { method: "POST", body: { email, password } });
+      const r = await api<LoginResponse>("/api/auth/login", { method: "POST", body: { email, password }, timeoutMs: SLOW_TIMEOUT_MS });
       if (r.token) await setToken(r.token);
       accept(r);
     },
@@ -112,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (email: string, password: string, name: string) => {
-      const r = await api<LoginResponse>("/api/auth/register", { method: "POST", body: { email, password, name } });
+      const r = await api<LoginResponse>("/api/auth/register", { method: "POST", body: { email, password, name }, timeoutMs: SLOW_TIMEOUT_MS });
       if (r.token) await setToken(r.token);
       accept(r);
     },

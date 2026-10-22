@@ -28,8 +28,19 @@ export const setUnauthorizedHandler = (fn: (() => void) | null) => {
 
 /** Sin respuesta en este tiempo, la petición se corta y se trata como "sin conexión" (Android no tiene timeout). */
 const TIMEOUT_MS = 15_000;
+/** Para acciones que el usuario espera (login, empezar o terminar): el servidor gratis de Render tarda ~1 min en despertar. */
+export const SLOW_TIMEOUT_MS = 75_000;
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+/** Despierta el servidor sin esperar la respuesta (Render gratis se duerme tras 15 min sin tráfico). En la web de producción no hace falta: cargar la página ya lo despierta. */
+export function wakeApi() {
+  if (isDemo() || !API_URL) return;
+  fetch(`${API_URL}/api/health`).catch(() => {});
+}
+
+export async function api<T>(
+  path: string,
+  init: { method?: string; body?: unknown; signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<T> {
   const method = init.method ?? "GET";
   if (isDemo()) return demoRequest<T>(method, path, init.body);
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -40,7 +51,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), init.timeoutMs ?? TIMEOUT_MS);
   const onAbort = () => ctrl.abort();
   init.signal?.addEventListener("abort", onAbort);
   let res: Response;
