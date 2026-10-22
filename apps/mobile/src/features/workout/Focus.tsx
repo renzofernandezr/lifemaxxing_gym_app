@@ -3,6 +3,7 @@
 import { calibrate, EQUIPMENT_NAME, fk, SCHEME_NAME, setsText, weightText, type LoadSuggestion } from "@lifemaxxing/core";
 import { Platform, Pressable, TextInput, View, type TextStyle } from "react-native";
 import { IconCheck, IconMinus, IconPlus } from "../../components/icons";
+import { OneRmCard } from "../../components/onerm";
 import { platesText } from "../../components/plates";
 import { Sheet } from "../../components/sheet";
 import { Button, T } from "../../components/ui";
@@ -160,9 +161,9 @@ export function SetFocus({ a, it, editing, draft, setDraft }: { a: ActiveWorkout
 
   // Una sola pista, la más útil.
   const prev = sug?.lastSets[it.k];
-  let hint: { text: string; good?: boolean } | null = null;
+  let hint: { text: string; good?: boolean; accent?: boolean } | null = null;
   if (test) hint = { text: "Sin llegar al fallo. Con esta serie se calculan todas tus cargas." };
-  else if (it.cal && it.kind === "work") hint = { text: `Calculado con tu 1RM estimado de ${fk(Math.round(it.cal * 2) / 2)} kg` };
+  else if (it.cal && it.kind === "work") hint = { text: `Calculado con tu 1RM estimado de ${fk(Math.round(it.cal * 2) / 2)} kg`, accent: true };
   else if (it.kind === "warmup") hint = { text: "Ligero: solo prepara el movimiento." };
   else if (prev && prev.reps > 0 && !cardio) {
     const up = it.w > prev.weightKg;
@@ -218,10 +219,10 @@ export function SetFocus({ a, it, editing, draft, setDraft }: { a: ActiveWorkout
       </View>
 
       {test && est ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <T v="label" style={{ marginRight: 2 }}>
-              Reserva
+              Reps en reserva
             </T>
             {[0, 1, 2, 3].map((v) => {
               const on = v === a.rir;
@@ -242,12 +243,14 @@ export function SetFocus({ a, it, editing, draft, setDraft }: { a: ActiveWorkout
               );
             })}
           </View>
-          <T v="small" center num style={{ color: est.reliable ? c.accentInk : c.bad, fontFamily: F.semibold }}>
-            1RM ≈ {fk(Math.round(est.e1rmKg * 2) / 2)} kg → {est.loads.map(fk).join(" / ")} kg
-          </T>
+          <OneRmCard e1rmKg={w > 0 ? est.e1rmKg : 0} loads={est.loads} perHand={eq === "mancuernas"} reliable={est.reliable} />
         </View>
       ) : hint ? (
-        <T v="small" center style={{ color: hint.good ? c.good : c.muted, fontFamily: hint.good ? F.semibold : F.regular }}>
+        <T
+          v="small"
+          center
+          style={{ color: hint.good ? c.good : hint.accent ? c.accentInk : c.muted, fontFamily: hint.good || hint.accent ? F.semibold : F.regular }}
+        >
           {hint.text}
         </T>
       ) : null}

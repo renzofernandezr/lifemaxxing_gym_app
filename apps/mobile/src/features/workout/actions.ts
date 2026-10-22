@@ -155,7 +155,10 @@ export async function logSet(idx: number, w: number, r: number) {
     const info = res.calibration
       ? `Tu 1RM estimado en ${ex.exercise.name.toLowerCase()}: ${fk(Math.round(res.calibration.e1rmKg * 2) / 2)} kg. Series de hoy: ${res.calibration.loads.map(fk).join(" / ")} kg${ex.exercise.equipment === "mancuernas" ? " por mano" : ""}.`
       : null;
-    await startRest(secs, title, nextText({ ...a, items: res.items }, nx), info);
+    const cal = res.calibration
+      ? { e1rmKg: res.calibration.e1rmKg, loads: res.calibration.loads, perHand: ex.exercise.equipment === "mancuernas" }
+      : null;
+    await startRest(secs, title, nextText({ ...a, items: res.items }, nx), info, cal);
   }
   return { finished: false, calibration: res.calibration };
 }

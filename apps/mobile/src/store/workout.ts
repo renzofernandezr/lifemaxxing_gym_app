@@ -22,6 +22,12 @@ export interface ActiveWorkout {
   calibrate: boolean;
 }
 
+export interface RestCalibration {
+  e1rmKg: number;
+  loads: number[];
+  perHand: boolean;
+}
+
 export interface RestState {
   endAt: number;
   total: number;
@@ -29,6 +35,8 @@ export interface RestState {
   next: string | null;
   /** Texto extra (p. ej. 1RM estimado tras la serie de prueba). */
   info: string | null;
+  /** 1RM y cargas tras la serie de prueba, para mostrarlos en grande. */
+  cal?: RestCalibration | null;
   notificationId: string | null;
 }
 

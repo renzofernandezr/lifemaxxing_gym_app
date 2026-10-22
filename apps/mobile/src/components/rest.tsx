@@ -8,6 +8,7 @@ import { adjustRest, beep, restDone, skipRest } from "../lib/rest";
 import { useWorkout } from "../store/workout";
 import { useTheme } from "../theme/theme";
 import { F, R } from "../theme/tokens";
+import { OneRmCard } from "./onerm";
 import { Button, T } from "./ui";
 
 function useNow(active: boolean, ms = 250) {
@@ -187,7 +188,8 @@ export function RestInline() {
 
   if (!v) return null;
   const { rest, left, done } = v;
-  const ring = Math.max(200, Math.min(width - 72, height * 0.36, 320));
+  // Con la tarjeta del 1RM debajo, el anillo se achica para que todo quepa sin scroll.
+  const ring = Math.max(200, Math.min(width - 72, height * (v?.rest.cal ? 0.29 : 0.36), 320));
   const digits = Math.round(ring * (done ? 0.2 : 0.28));
   const color = done ? c.good : c.accent;
   const dashoffset = progress.interpolate({ inputRange: [0, 1], outputRange: [0, RING_C] });
@@ -229,7 +231,9 @@ export function RestInline() {
         <Button title="−15 s" onPress={() => adjustRest(-15)} style={{ minWidth: 96 }} />
         <Button title="+30 s" onPress={() => adjustRest(30)} style={{ minWidth: 96 }} />
       </View>
-      {rest.info ? (
+      {rest.cal ? (
+        <OneRmCard e1rmKg={rest.cal.e1rmKg} loads={rest.cal.loads} perHand={rest.cal.perHand} />
+      ) : rest.info ? (
         <View style={{ alignSelf: "stretch", backgroundColor: c.accentSoft, borderRadius: R, padding: 12 }}>
           <T v="small" style={{ fontFamily: F.semibold, fontSize: 14 }}>
             {rest.info}
