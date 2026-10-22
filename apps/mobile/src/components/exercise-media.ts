@@ -1,0 +1,35 @@
+// GENERADO por apps/mobile/scripts/get-exercise-images.mjs. No editar a mano.
+// Fotos de free-exercise-db (dominio público): inicio y final de cada movimiento, para la animación de Técnica.
+import type { ImageSourcePropType } from "react-native";
+
+export const EXERCISE_FRAMES: Record<string, [ImageSourcePropType, ImageSourcePropType]> = {
+  inc: [require("../../assets/exercises/barbell-incline-bench-press-medium-grip-0.jpg"), require("../../assets/exercises/barbell-incline-bench-press-medium-grip-1.jpg")],
+  ohp: [require("../../assets/exercises/standing-military-press-0.jpg"), require("../../assets/exercises/standing-military-press-1.jpg")],
+  tri: [require("../../assets/exercises/triceps-pushdown-rope-attachment-0.jpg"), require("../../assets/exercises/triceps-pushdown-rope-attachment-1.jpg")],
+  lat: [require("../../assets/exercises/side-lateral-raise-0.jpg"), require("../../assets/exercises/side-lateral-raise-1.jpg")],
+  knee: [require("../../assets/exercises/knee-hip-raise-on-parallel-bars-0.jpg"), require("../../assets/exercises/knee-hip-raise-on-parallel-bars-1.jpg")],
+  neg: [require("../../assets/exercises/chin-up-0.jpg"), require("../../assets/exercises/chin-up-1.jpg")],
+  jal: [require("../../assets/exercises/underhand-cable-pulldowns-0.jpg"), require("../../assets/exercises/underhand-cable-pulldowns-1.jpg")],
+  ham: [require("../../assets/exercises/incline-hammer-curls-0.jpg"), require("../../assets/exercises/incline-hammer-curls-1.jpg")],
+  sq: [require("../../assets/exercises/barbell-squat-0.jpg"), require("../../assets/exercises/barbell-squat-1.jpg")],
+  bul: [require("../../assets/exercises/split-squat-with-dumbbells-0.jpg"), require("../../assets/exercises/split-squat-with-dumbbells-1.jpg")],
+  rdl: [require("../../assets/exercises/stiff-legged-dumbbell-deadlift-0.jpg"), require("../../assets/exercises/stiff-legged-dumbbell-deadlift-1.jpg")],
+  sapd: [require("../../assets/exercises/straight-arm-pulldown-0.jpg"), require("../../assets/exercises/straight-arm-pulldown-1.jpg")],
+  fp: [require("../../assets/exercises/face-pull-0.jpg"), require("../../assets/exercises/face-pull-1.jpg")],
+  hlr: [require("../../assets/exercises/hanging-leg-raise-0.jpg"), require("../../assets/exercises/hanging-leg-raise-1.jpg")],
+  whl: [require("../../assets/exercises/ab-roller-0.jpg"), require("../../assets/exercises/ab-roller-1.jpg")],
+  brg: [require("../../assets/exercises/butt-lift-bridge-0.jpg"), require("../../assets/exercises/butt-lift-bridge-1.jpg")],
+  inc_db: [require("../../assets/exercises/incline-dumbbell-press-0.jpg"), require("../../assets/exercises/incline-dumbbell-press-1.jpg")],
+  dip_w: [require("../../assets/exercises/dips-chest-version-0.jpg"), require("../../assets/exercises/dips-chest-version-1.jpg")],
+  tri_oh: [require("../../assets/exercises/standing-one-arm-dumbbell-triceps-extension-0.jpg"), require("../../assets/exercises/standing-one-arm-dumbbell-triceps-extension-1.jpg")],
+  uprow: [require("../../assets/exercises/standing-dumbbell-upright-row-0.jpg"), require("../../assets/exercises/standing-dumbbell-upright-row-1.jpg")],
+  jal_pr: [require("../../assets/exercises/wide-grip-lat-pulldown-0.jpg"), require("../../assets/exercises/wide-grip-lat-pulldown-1.jpg")],
+  curl_inc: [require("../../assets/exercises/incline-dumbbell-curl-0.jpg"), require("../../assets/exercises/incline-dumbbell-curl-1.jpg")],
+  box: [require("../../assets/exercises/box-squat-0.jpg"), require("../../assets/exercises/box-squat-1.jpg")],
+  sl_rdl: [require("../../assets/exercises/kettlebell-one-legged-deadlift-0.jpg"), require("../../assets/exercises/kettlebell-one-legged-deadlift-1.jpg")],
+  rdf: [require("../../assets/exercises/seated-bent-over-rear-delt-raise-0.jpg"), require("../../assets/exercises/seated-bent-over-rear-delt-raise-1.jpg")],
+  chin_w: [require("../../assets/exercises/chin-up-0.jpg"), require("../../assets/exercises/chin-up-1.jpg")],
+  bench: [require("../../assets/exercises/barbell-bench-press-medium-grip-0.jpg"), require("../../assets/exercises/barbell-bench-press-medium-grip-1.jpg")],
+  pull_w: [require("../../assets/exercises/pullups-0.jpg"), require("../../assets/exercises/pullups-1.jpg")],
+  hip_thrust: [require("../../assets/exercises/barbell-hip-thrust-0.jpg"), require("../../assets/exercises/barbell-hip-thrust-1.jpg")],
+};
