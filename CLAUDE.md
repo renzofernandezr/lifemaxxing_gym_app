@@ -8,8 +8,8 @@
 - Dominio (rutina, progresión, calibración, nutrición): `docs/rutina-fase1.md`.
 - Rama de trabajo: `feat/app-rn`. Commits pequeños, conventional commits en español, push al cerrar cada hito. Nunca `git push --force`.
 - Nunca commitees secretos. Solo `.env.example`. Las credenciales generadas van en `.secrets/` (ignorada por git).
-- Sin Docker ni Postgres local: las bases viven en Railway. Desarrollo y tests usan el entorno `dev` (tests en un schema temporal); `production` solo se toca vía deploy.
-- No toques proyectos de Railway distintos de `lifemaxxing-gym`.
+- Sin Docker ni Postgres local: la base vive en Render (antes Railway). Hoy solo existe `production`, que solo se toca vía deploy. Si vuelve a haber `dev`, ahí van el desarrollo y los tests (en un schema temporal).
+- En Render, toca solo los recursos `lifemaxxing-gym*`. En Railway, solo el proyecto `lifemaxxing-gym`.
 - UI en español (Perú), código en inglés, unidades en kg, zona horaria `America/Lima`.
 - Antes de cerrar un hito: `pnpm typecheck && pnpm test`.
 - Si algo falla 3 veces, anótalo como bloqueo en `docs/PROGRESO.md` y sigue con lo siguiente.
@@ -19,18 +19,16 @@
 
 - PR #1 abierto desde `feat/app-rn`: https://github.com/renzofernandezr/lifemaxxing_gym_app/pull/1
 - La app (M5–M7) está completa y probada con el modo demo en web y en el iPhone con Expo Go. `packages/core` (M1) tiene 43 tests y `apps/mobile` tiene 11; todos pasan.
-- **Bloqueo**: Railway está caído desde el 21-oct ("Deploys have been paused temporarily").
-  - Pendientes por eso: las migraciones (M2), los tests de integración de la API (M3), el deploy (M4) y el smoke test.
-  - El código está listo, igual que `scripts/railway-setup.sh`, que aún no se ha ejecutado.
-  - `pnpm test` falla en `apps/api` con "Falta DEV_DATABASE_URL". Es lo esperado mientras no haya base de datos dev.
+- **Servidor en Render (plan gratis), solo production**: https://lifemaxxing-gym.onrender.com. Las migraciones, el usuario de Renzo y el smoke test están hechos. Detalle en "Servidor (Render)" más abajo.
+  - No hay entorno `dev`, porque Render gratis da una sola Postgres. Por eso `pnpm test` falla en `apps/api` con "Falta DEV_DATABASE_URL", y es lo esperado.
 - **TestFlight**: el perfil EAS `demo` está listo y funciona sin servidor. Falta que Renzo lance el build (ver abajo).
 
 ## Configurar en otra PC
 
 1. `git clone https://github.com/renzofernandezr/lifemaxxing_gym_app && cd lifemaxxing_gym_app && git checkout feat/app-rn`
-2. Instalar Node 22 con fnm (`.nvmrc` = 22; `engines` exige `>=22 <23`):
-   - Una sola vez: `fnm install 22`.
-   - En cada terminal: `eval "$(fnm env)"; fnm use 22`.
+2. Instalar Node 22 con fnm o nvm (`.nvmrc` = 22; `engines` exige `>=22 <23`):
+   - fnm: una sola vez `fnm install 22`; en cada terminal `eval "$(fnm env)"; fnm use 22`.
+   - nvm (lo que usa la PC de `~/Repositories`): una sola vez `nvm install`; en cada terminal `nvm use`.
    - Node 26 ya no trae corepack, por eso hace falta el 22.
 3. Instalar dependencias: `corepack enable && pnpm install`.
    - pnpm 12.14.0 sale de `packageManager`.
@@ -38,8 +36,8 @@
 4. Iniciar sesión:
    - `gh auth login`
    - `npx eas-cli@latest login`, con la cuenta Expo `renzofernandezg`.
-   - `railway login`, solo cuando Railway vuelva.
-5. No hay secretos que copiar. `.secrets/` todavía no existe (lo crea `railway-setup.sh`), y `.env` solo tendrá `DEV_DATABASE_URL` cuando exista la base dev. Plantilla: `.env.example`.
+   - Render: `brew install render`, luego `render login` (autorizar en el navegador) y `render workspace set tea-csp5vibgbbvc73fq0qpg` ("Renzo's Workspace").
+5. Secretos: la contraseña de production está en `.secrets/credenciales.txt`, y solo existe en la PC de `~/Repositories`. Pásala a mano, nunca por git. No hay `.env`, porque no hay base dev. Plantilla: `.env.example`.
 6. En Windows, los scripts `demo`, `demo:nuevo` y `scripts/*.sh` usan sintaxis de bash. Correrlos desde Git Bash o WSL.
 
 ## Probar hoy (modo demo, sin servidor)
@@ -73,7 +71,7 @@
   4. Instalar desde la app TestFlight.
 - **Perfiles de `apps/mobile/eas.json`**:
   - `demo`: `EXPO_PUBLIC_DEMO=1`, `autoIncrement` y versión remota.
-  - `preview` y `production`: usan la API real, así que necesitan Railway.
+  - `preview` y `production`: usan la API real de Render (`apps/mobile/.env.production`).
 - En TestFlight los datos viven solo en el iPhone. Si se borra la app se pierden, y no pasan solos a la API cuando exista.
 - **Lo que ya está resuelto para que Apple no rechace el build**:
   - Ícono de iOS sin canal alfa: `assets/images/icon-ios.png`.
@@ -82,20 +80,24 @@
   - Si `eas init` o `eas build` vuelven a agregar `android.permissions` (por ejemplo `RECORD_AUDIO`) a `app.json`, hay que quitarlos.
 - **Opción ofrecida y no aceptada todavía**: cambiar el perfil `demo` a `EXPO_PUBLIC_DEMO=nuevo` para entrenar de verdad desde la semana 1. Hacerlo solo si Renzo lo pide.
 
-## Servidor (pendiente)
+## Servidor (Render)
 
-- Railway sigue siendo el plan. Cuando https://status.railway.com esté en verde, correr en orden:
-  ```
-  scripts/railway-setup.sh project
-  scripts/railway-setup.sh vars
-  scripts/railway-setup.sh devdb
-  scripts/railway-setup.sh deploy dev
-  scripts/railway-setup.sh deploy production
-  scripts/railway-setup.sh users
-  scripts/railway-setup.sh smoke
-  ```
-  Después, commitear `apps/mobile/.env.production` y actualizar `docs/REPORTE_NOCHE.md` y el PR.
-- Renzo preguntó por alternativas a Railway, pero por ahora no quiere Fly ni Neon. No cambies de proveedor sin que lo pida.
+- Desde el 21-oct se usa Render en lugar de Railway, por pedido de Renzo, todo en plan gratis. No cambies de proveedor ni de plan sin que lo pida; tampoco Fly ni Neon.
+- **Recursos** (workspace "Renzo's Workspace", región Virginia, sin proyecto de Render):
+  - Postgres `lifemaxxing-gym-db` (`dpg-dbcljh8m7kps73c4sum0-a`), free, Postgres 18. Sin IPs permitidas: solo acepta la red privada de Render.
+  - Web `lifemaxxing-gym` (`srv-dbclk5q9lscs73eapu20`), free, Docker (`Dockerfile`), healthcheck `/api/health`. Auto-deploy en cada commit a `feat/app-rn`; ignora `docs/**` y `**/*.md`.
+  - Las migraciones corren al arrancar el contenedor.
+  - El workspace también tiene `RoyalDB_api`, que no es de este proyecto. No lo toques.
+- **Límites del plan gratis**:
+  - La web se duerme tras 15 min sin tráfico y tarda ~1 min en despertar.
+  - Las 750 h gratis al mes son de todo el workspace.
+  - La Postgres no tiene backups y **caduca el 21-nov-2026**. Hay 14 días de gracia para pasarla a pago; si no, Render la borra con todos los datos. Avísale a Renzo antes de esa fecha.
+- **Script**: `scripts/render-setup.sh db | app | wait | users | smoke`. No imprime secretos y solo toca recursos `lifemaxxing-gym*`.
+  - La CLI no cambia variables de entorno de un servicio. Para eso: dashboard → `lifemaxxing-gym` → Environment.
+- **Útil**:
+  - `render deploys list srv-dbclk5q9lscs73eapu20 -o json`
+  - `render logs -r srv-dbclk5q9lscs73eapu20 --limit 50 -o text`
+- Railway: `railway.toml` y `scripts/railway-setup.sh` se conservan, por si se vuelve.
 
 ## Preferencias de diseño de Renzo (ya aplicadas, no revertir)
 

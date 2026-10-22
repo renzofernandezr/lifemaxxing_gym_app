@@ -1,5 +1,19 @@
 # Reporte de la noche · 21-oct-2026
 
+## Actualización (21-oct, noche): servidor en Render
+
+Railway siguió caído, así que el servidor se montó en **Render, en plan gratis y solo con production**:
+
+- **production:** https://lifemaxxing-gym.onrender.com (API y web en el mismo origen). Auto-deploy desde `feat/app-rn`.
+- **Migraciones:** las 3 se aplicaron sin errores en Postgres 18 en el primer deploy.
+- **Smoke test:** OK. Recorrió health, login, today, sesión, 2 series (con reintento idempotente), finish, check-in, overview y la web; al final borró sus datos. Login web con cookie (Secure, httpOnly) y CSRF probados.
+- **Usuario de Renzo:** creado. Su contraseña está **solo** en `.secrets/credenciales.txt` (ignorado por git). Cámbiala después del primer login.
+- **Sin `dev`:** Render gratis da una sola Postgres por workspace. Por eso los tests de integración de la API siguen sin correr.
+- **Límites:** la web se duerme tras 15 min sin uso (~1 min en despertar). La Postgres no tiene backups y **caduca el 21-nov-2026**; si no se pasa a pago, Render la borra con los datos tras 14 días de gracia.
+- **Cómo se configuró:** `scripts/render-setup.sh` (CLI de Render). Detalle en `CLAUDE.md` y `docs/DECISIONES.md`.
+
+Lo que sigue más abajo es el reporte original de la noche, cuando todavía se esperaba Railway.
+
 ## En una línea
 
 La app (iPhone + web), la API y la base de datos quedaron escritas, probadas sin base de datos y en la rama `feat/app-rn`. **No hay nada desplegado en Railway**: durante toda la noche Railway tuvo un incidente que primero pausó los builds y después tumbó su API ("Major Outage"). No se pudo crear el proyecto `lifemaxxing-gym`. Dejé un script que hace M2 y M4 cuando Railway vuelva.
