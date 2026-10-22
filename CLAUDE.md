@@ -19,11 +19,13 @@
 ## Estado al 2026-10-22
 
 - PR #1 abierto desde `feat/app-rn`: https://github.com/renzofernandezr/lifemaxxing_gym_app/pull/1
-- La app (M5–M7) está completa. `packages/core` (M1) tiene 43 tests y `apps/mobile` tiene 11; todos pasan.
+- La app (M5–M7) está completa. `packages/core` (M1) tiene 52 tests y `apps/mobile` tiene 16; todos pasan.
+- **Notas del gimnasio de Renzo (22-oct), aplicadas**: descansos de 2 min y 1:30, mancuernas de 2 en 2, ajuste automático de cargas (mismo día y próxima sesión), descanso que motiva, fotos animadas en Técnica, vuelve Saltar, sentadilla con barra en lugar de la búlgara y jalón con brazos rectos en lugar de face pulls. Sus 3 × 8 de sentadilla con 40 kg del 21-oct quedaron registradas (migración 0005). Detalle en `docs/BITACORA.md`.
 - **Servidor en Render (plan gratis), solo production**: https://lifemaxxing-gym.onrender.com. Las migraciones, el usuario de Renzo y el smoke test están hechos, y hay auto-deploy desde GitHub. Detalle en "Servidor (Render)" más abajo.
   - No hay entorno `dev`, porque Render gratis da una sola Postgres. Por eso `pnpm test` falla en `apps/api` con "Falta DEV_DATABASE_URL", y es lo esperado.
-- **TestFlight**: build 4 (1.0.0) con la API real. Renzo ya terminó su primer Workout B con la app el 21-oct (detalle en `docs/BITACORA.md`).
+- **TestFlight**: el último build es el 4 (1.0.0) con la API real. Los cambios del 22-oct en la app necesitan el **build 5**, que lanza Renzo (ver "TestFlight"); la API ya los tiene desde el deploy.
 - **Pendientes**:
+  - Lanzar el build 5 y probar en el iPhone: el descanso nuevo, Saltar, el ajuste automático y las fotos de Técnica.
   - La Postgres gratis caduca el **21-nov-2026**.
   - La app no permite cambiar la contraseña.
   - Falta confirmar en el iPhone el arreglo del decimal del peso (build 4).
@@ -35,6 +37,7 @@
 2. Instalar Node 22 con fnm o nvm (`.nvmrc` = 22; `engines` exige `>=22 <23`):
    - fnm: una sola vez `fnm install 22`; en cada terminal `eval "$(fnm env)"; fnm use 22`.
    - nvm (lo que usa la PC de `~/Repositories`): una sola vez `nvm install`; en cada terminal `nvm use`.
+   - La Mac de `~/Repos` usa fnm y no tiene la CLI de Render ni `.secrets/`.
    - Node 26 ya no trae corepack, por eso hace falta el 22.
 3. Instalar dependencias: `corepack enable && pnpm install`.
    - pnpm 12.14.0 sale de `packageManager`.
@@ -67,6 +70,7 @@
   - Proyecto EAS: `22fdf9a2-a1c1-45a3-b7f2-aec14b9ba6ca`, owner `renzofernandezg`.
   - Bundle: `com.renzofernandez.lifemaxxinggym`. App Store Connect: `ascAppId` 6825488682 (está en `eas.json`).
   - Nombre: "Life Maxxing".
+- **Lo lanza Renzo**: el modo automático de Claude Code bloquea `eas build --auto-submit` (lo trata como transacción real). Dale el comando en vez de intentarlo.
 - **Comando** (ya no pide nada: los certificados están en EAS y el `ascAppId` en `eas.json`):
   ```
   cd apps/mobile && npx eas-cli@latest build -p ios --profile production --auto-submit --non-interactive
@@ -106,6 +110,16 @@
   - `render logs -r srv-dbclk5q9lscs73eapu20 --limit 50 -o text`
 - Railway: `railway.toml` y `scripts/railway-setup.sh` se conservan, por si se vuelve.
 
+## Cambiar el programa (ejercicios, series, descansos)
+
+1. Edita `packages/core/src/program.ts` (es la fuente única) y sus tests en `packages/core/src/core.test.ts`.
+2. `pnpm --filter api gen:seed` regenera `0002_seed_program.sql`, que usan las bases nuevas y su test.
+3. `pnpm --filter api gen:sync NNNN_nombre` (siguiente número libre) genera la migración que actualiza producción en su lugar: mismos ids, borra lo que sobre.
+4. Push: Render despliega y corre las migraciones al arrancar.
+   - Si la migración falla, el contenedor no arranca y Render mantiene la versión anterior.
+   - No hay base `dev`: las migraciones se pueden probar con PGlite (Postgres en memoria) en el scratchpad, como se hizo el 22-oct.
+- Las fotos de Técnica salen de `apps/mobile/scripts/get-exercise-images.mjs` (mapa ejercicio → free-exercise-db). Si agregas un ejercicio, agrégalo ahí y córrelo.
+
 ## Preferencias de diseño de Renzo (ya aplicadas, no revertir)
 
 - **Nombre**: se muestra "Life Maxxing". El repo, el slug y el bundle id no cambian. El login es limpio: logo y nombre centrados, campos amplios y "Mostrar" contraseña.
@@ -113,9 +127,13 @@
   - Nombre del ejercicio grande y "Serie N de M".
   - Tarjetas grandes de kg y reps con botones redondos y un botón ✓ "Hecho" grande.
   - El texto del tipo de serie (calentamiento, prueba…) va grande.
-  - Ejercicios y Técnica se abren en hojas inferiores.
-  - No hay botón "Saltar".
+  - Ejercicios, Técnica y Saltar se abren en hojas inferiores.
+  - **Saltar volvió** (22-oct; antes lo había pedido quitar): esta serie o el ejercicio completo. Tocar el punto de una serie saltada la retoma.
+  - Si una serie cambia por el ajuste automático, la pista dice cuánto y por qué ("↑ Subimos 5 kg: hiciste 11 reps y el objetivo era 6–8").
+  - Técnica muestra arriba las fotos de inicio y final del movimiento alternándose en bucle.
 - **Descanso**:
+  - 2 min en los básicos pesados y 1:30 en el resto (calentamientos 1 min y 1:30; abdominales 1 min).
+  - Arriba, en grande: "Quedan N series" (con puntos), "¡Última serie!" o "¡Ejercicio listo! Sigue: …"; abajo, "N de M series hoy".
   - Va dentro de la sesión como un paso más: serie → descanso → serie, con deslizamiento.
   - Sin capa encima y sin puntos extra en el indicador.
   - Anillo fino y plano, nada 3D ni grueso.
@@ -129,6 +147,8 @@
 - **Ícono de iOS y Android**: el disco naranja sobre fondo blanco, con el agujero blanco y el anillo café. Lo genera `apps/mobile/scripts/gen-icons.mjs`; `icon-ios.png` va sin canal alfa. El splash y el favicon no cambian.
 - **Hápticos**: toque suave en los botones y vibración larga (~3 s en iOS) al terminar el descanso.
 - **1RM**: si no hay 1RM, la primera sesión A y la primera B traen series de prueba para medirlo. El resultado se muestra en una tarjeta naranja bien visible, con el 1RM grande y las cargas de hoy, en la serie de prueba y en el descanso que la sigue.
+- **Cargas**: mancuernas de 2 en 2 kg (su gimnasio tiene desde menos de 10 kg); − y + caen en la grilla del equipo. Pasarse del tope sube las series siguientes del día; no llegar al mínimo las baja. A la próxima sesión: tope +1 incremento, 3 reps sobre el tope +2, bajo el mínimo −1.
+- **Workout B (fase 1)**: sentadilla con barra (no búlgara) y jalón con brazos rectos en polea, de pie (no face pulls). Lo anterior queda como alternativa.
 - El detalle y el motivo de cada cambio están en `docs/DECISIONES.md`.
 
 ## Cómo trabaja Renzo

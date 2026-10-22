@@ -2,6 +2,51 @@
 
 Qué se hizo en cada sesión de trabajo, con sus commits. El porqué de cada decisión está en `docs/DECISIONES.md`, y el estado por hito en `docs/PROGRESO.md`.
 
+## 22 oct 2026 · Notas del gimnasio de Renzo
+
+Sesión hecha desde la Mac de `~/Repos/lifemaxxing_gym_app` (fnm, Node 22), con la rama `feat/app-rn`. Antes se bajaron los 19 commits de la otra PC.
+
+### 1. Lo que pidió (sus notas tras entrenar con la app) y lo que se hizo
+
+| Nota | Qué se hizo | Commit |
+|---|---|---|
+| Menos descanso: 1:30 o 2 min según lo pesado | 2 min en básicos pesados, 1:30 en el resto; calentamientos 1 min y 1:30; prueba 2 min; abdominales 1 min y rest-pause 12 s sin cambios | `ba6b260` |
+| Mancuernas de 2 en 2 kg | Laterales y pájaros +2 kg (antes +1); − y + caen en la grilla del equipo (`stepFrom`) | `ba6b260`, `2a853c4` |
+| Motivar más en el descanso, con las series que quedan | "Quedan N series de X" en grande con puntos, "¡Última serie!", "¡Ejercicio listo! Sigue: Y" y "N de M series hoy" | `2a853c4` |
+| Ajustar pesos y reps según la serie anterior, el mismo día y a futuro | `autoregulate` (series siguientes del día) y `suggestNext` en ambos sentidos (+2 incrementos con 3 reps sobre el tope, −1 bajo el mínimo) | `ba6b260`, `2a853c4` |
+| Animación del ejercicio en Técnica | Fotos de inicio y final (free-exercise-db, dominio público) alternándose en bucle; ~3 MB dentro de la app | `ba046b8`, `2a853c4` |
+| Curl martillo "no fue pirámide inversa" | Sí lo fue: su prueba de 10 × 5 al fallo dio un 1RM de 11.7 kg y la app pidió 8 / 6 / 4 kg; usó 10 kg en las tres porque creyó que era el mínimo (su gimnasio tiene más livianas) y salieron 7, 7 y 3. Con el ajuste nuevo, la próxima vez queda 10 / 10 / 8 | — |
+| "¿Por qué búlgara si es con barra?" | Sentadilla con barra (`sq`, Kino 4 × 6–8) en lugar de la búlgara, que queda como alternativa | `ba6b260` |
+| Volver a poner Saltar en las series | Hoja Saltar: esta serie o el ejercicio; tocar una serie saltada la retoma | `2a853c4` |
+| Hizo 3 × 8 de sentadilla con barra con 40 kg | Registradas en su Workout B del 21-oct con su resumen (12 series, 2,386 kg); la próxima sentadilla parte de 40 kg buscando 8 en las 4 series | `99b504b` |
+| Cambiar face pulls | Jalón con brazos rectos en polea, de pie (`sapd`, Kino 4 × 12–15); face pulls como alternativa | `ba6b260` |
+
+Respuestas de Renzo a las preguntas: sentadilla con barra (no búlgara con barra); face pulls → "standing cable lat pushdown"; en su gimnasio hay mancuernas de menos de 10 kg; las sentadillas fueron el 21-oct en el Workout B.
+
+### 2. Base de datos
+
+- El seed `0002` solo inserta, así que producción no veía los cambios de `program.ts`. Nuevo `pnpm --filter api gen:sync NNNN_nombre`: genera una migración que actualiza el programa en su lugar (mismos ids). La primera es `0004_programa_22oct`.
+- `0005_sentadilla_21oct`: migración de datos con las 3 series y el resumen actualizado. Busca la sesión por correo, rutina B y fecha en Lima; en cualquier otra base no hace nada.
+- Sin base `dev`, las dos se probaron en una Postgres en memoria (PGlite 0.3, solo en el scratchpad) con dos casos:
+  - Base de producción simulada: seed viejo y una sesión como la suya. Rutina B con `sq` y `sapd` (mismos ids), descansos, incrementos, 3 series insertadas, resumen con la sentadilla después de la búlgara, y la sesión descartada intacta.
+  - Base nueva: 31 ejercicios y la migración de datos sin efecto.
+- El push desplegó la API en Render y corrió las migraciones al arrancar.
+
+### 3. Verificación
+
+- `pnpm typecheck` limpio. Core 52 tests y mobile 16, todos pasan. La API sigue sin base `dev` ("Falta DEV_DATABASE_URL").
+- Web exportada y recorrida con `puppeteer-core` en modo demo (`?demo=1` y `?demo=nuevo`), a 390 px:
+  - Descanso con "Quedan 2 series", tarjeta del 1RM, "¡Ejercicio listo!" y avance del día.
+  - Técnica con foto.
+  - Hoja Saltar y serie saltada atenuada.
+  - "↑ Subimos 5 kg" tras 11 reps en un rango de 6–8.
+
+### 4. Pendientes
+
+- **Build 5 de TestFlight**: el modo automático de Claude Code bloqueó `eas build --auto-submit`; lo lanza Renzo con el comando de `CLAUDE.md`.
+- Probar en el iPhone: el fundido de las fotos, el descanso nuevo y el ajuste automático con datos reales.
+- Siguen los de antes: Postgres gratis hasta el 21-nov, cambio de contraseña y modo avión con la API real.
+
 ## 21–22 oct 2026 · Render, TestFlight con la API y primer entreno real
 
 Sesión hecha desde la PC de `~/Repositories/lifemaxxing_gym_app`, con la rama `feat/app-rn`.
