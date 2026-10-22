@@ -1,6 +1,8 @@
 # Lifemaxxing Gym
 
-Bitácora de gimnasio personal (Greek God 2.0 adaptado): app para iPhone y web con Expo, API en Node (Hono) y Postgres en Railway.
+Bitácora de gimnasio personal (Greek God 2.0 adaptado): app para iPhone y web con Expo, API en Node (Hono) y Postgres en Render (antes Railway).
+
+Producción: https://lifemaxxing-gym.onrender.com (web y API). iPhone: TestFlight.
 
 ```
 packages/core   lógica de entrenamiento, calendario, nutrición y esquemas (TypeScript puro + tests)
@@ -14,20 +16,20 @@ index.html      prototipo original (referencia de diseño y lógica)
 
 - Node 22 (`.nvmrc`). Con fnm: `fnm use` (la Mac tiene Node 26 por defecto).
 - pnpm vía corepack: `corepack enable`.
-- `.env` en la raíz (ver `.env.example`) con `DEV_DATABASE_URL` = URL pública del Postgres del entorno `dev` de Railway.
+- La base vive en Render (production); hoy no hay base `dev`, así que `.env` no hace falta (ver `.env.example`).
 
 ## Comandos
 
 ```bash
 pnpm install
-pnpm dev               # API local (contra la DB dev de Railway) + Expo
+pnpm dev               # API local + Expo (la API necesita una DB dev: hoy no hay)
 pnpm test              # core + API (schema temporal en la DB dev) + lógica de la app
 pnpm typecheck
 pnpm db:migrate:dev    # migraciones en la DB dev
 pnpm --filter mobile web   # solo la web de Expo
 ```
 
-Más detalle: `docs/PLAN_APP_RN.md` (plan), `docs/PROGRESO.md`, `docs/DECISIONES.md`, `db/README.md`.
+Más detalle: `docs/PLAN_APP_RN.md` (plan), `docs/PROGRESO.md`, `docs/DECISIONES.md`, `docs/BITACORA.md` (historial de sesiones), `db/README.md`.
 
 ## Prototipo original (`index.html`)
 

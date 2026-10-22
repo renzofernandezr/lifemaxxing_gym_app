@@ -13,6 +13,8 @@ Railway siguió caído, así que el servidor se montó en **Render, en plan grat
 - **Límites:** la web se duerme tras 15 min sin uso (~1 min en despertar). La Postgres no tiene backups y **caduca el 21-nov-2026**; si no se pasa a pago, Render la borra con los datos tras 14 días de gracia.
 - **Cómo se configuró:** `scripts/render-setup.sh` (CLI de Render). Detalle en `CLAUDE.md` y `docs/DECISIONES.md`.
 
+Todo lo que se hizo después (cambios en la app, builds de TestFlight 2–4 y el primer entreno real) está en [`docs/BITACORA.md`](BITACORA.md).
+
 Lo que sigue más abajo es el reporte original de la noche, cuando todavía se esperaba Railway.
 
 ## En una línea

@@ -3,7 +3,8 @@
 ## Reglas
 
 - Plan completo de construcción: `docs/PLAN_APP_RN.md`. Síguelo hito por hito.
-- Antes de hacer nada en una sesión nueva, lee `docs/PROGRESO.md` y `docs/DECISIONES.md` (si existen) y continúa desde el último hito pendiente.
+- Antes de hacer nada en una sesión nueva, lee `docs/PROGRESO.md`, `docs/DECISIONES.md` y `docs/BITACORA.md` (qué se hizo en cada sesión, con commits y pendientes) y continúa desde lo último pendiente.
+- Al cerrar una sesión de trabajo, agrega su resumen a `docs/BITACORA.md`.
 - Referencia de diseño y lógica: `index.html` (prototipo). No lo borres.
 - Dominio (rutina, progresión, calibración, nutrición): `docs/rutina-fase1.md`.
 - Rama de trabajo: `feat/app-rn`. Commits pequeños, conventional commits en español, push al cerrar cada hito. Nunca `git push --force`.
@@ -15,13 +16,18 @@
 - Si algo falla 3 veces, anótalo como bloqueo en `docs/PROGRESO.md` y sigue con lo siguiente.
 - Cada decisión nueva va como fila en `docs/DECISIONES.md` (fecha · decisión · por qué).
 
-## Estado al 2026-10-21
+## Estado al 2026-10-22
 
 - PR #1 abierto desde `feat/app-rn`: https://github.com/renzofernandezr/lifemaxxing_gym_app/pull/1
-- La app (M5–M7) está completa y probada con el modo demo en web y en el iPhone con Expo Go. `packages/core` (M1) tiene 43 tests y `apps/mobile` tiene 11; todos pasan.
-- **Servidor en Render (plan gratis), solo production**: https://lifemaxxing-gym.onrender.com. Las migraciones, el usuario de Renzo y el smoke test están hechos. Detalle en "Servidor (Render)" más abajo.
+- La app (M5–M7) está completa. `packages/core` (M1) tiene 43 tests y `apps/mobile` tiene 11; todos pasan.
+- **Servidor en Render (plan gratis), solo production**: https://lifemaxxing-gym.onrender.com. Las migraciones, el usuario de Renzo y el smoke test están hechos, y hay auto-deploy desde GitHub. Detalle en "Servidor (Render)" más abajo.
   - No hay entorno `dev`, porque Render gratis da una sola Postgres. Por eso `pnpm test` falla en `apps/api` con "Falta DEV_DATABASE_URL", y es lo esperado.
-- **TestFlight**: el perfil EAS `demo` está listo y funciona sin servidor. Falta que Renzo lance el build (ver abajo).
+- **TestFlight**: build 4 (1.0.0) con la API real. Renzo ya terminó su primer Workout B con la app el 21-oct (detalle en `docs/BITACORA.md`).
+- **Pendientes**:
+  - La Postgres gratis caduca el **21-nov-2026**.
+  - La app no permite cambiar la contraseña.
+  - Falta confirmar en el iPhone el arreglo del decimal del peso (build 4).
+- **Cuidado**: no corras `npx expo lint`. No hay ESLint configurado, y el comando lo instala y ensucia `package.json` y `pnpm-lock.yaml`.
 
 ## Configurar en otra PC
 
@@ -116,6 +122,7 @@
   - Fuera de la sesión aparece una barra flotante que lleva de vuelta.
 - **Progreso y Plan**: el título y las sub-pestañas quedan fijos y solo hace scroll el contenido. Sin margen grande al final. Funciona igual en escritorio: también hay sub-pestañas, no todas las secciones apiladas.
 - **Fuerza**: muestra todos los ejercicios agrupados, cada uno con su mejora y una mini gráfica.
+- **Plan → Cargas**: selector Fase 1 / Fase 2 y chips de ejercicios (no una lista larga), steppers para peso y reps, y en móvil la tabla en filas de dos columnas. En escritorio, todo cabe en una pantalla.
 - **Cabecera**: sin botón de tema; el tema se cambia en Ajustes.
 - **Ajustes**: lista agrupada (nombre, altura, peso meta, inicio del programa; tema; cerrar sesión), sin "Peso inicial". El nombre y el correo van bien separados. "Guardar cambios" solo aparece si hay cambios.
   - En escritorio: encabezado como en Progreso y Plan, y dos columnas. A la izquierda, la cuenta (tarjeta con "Cerrar sesión") y Apariencia; a la derecha, el Perfil. Enter guarda y Esc cierra.
