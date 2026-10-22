@@ -25,11 +25,12 @@ import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { PanesScreen } from "../../components/panes";
 import { platesText } from "../../components/plates";
-import { Card, CardHead, Field, Grid, Pill, Seg, T, useLayout, ViewHead } from "../../components/ui";
+import { Card, CardHead, Grid, Pill, Seg, Stepper, T, useLayout, ViewHead } from "../../components/ui";
 import { useAuth } from "../../lib/auth";
 import { useRoutines } from "../../lib/queries";
 import { useTheme } from "../../theme/theme";
 import { F, R } from "../../theme/tokens";
+import { shortName } from "../workout/Focus";
 
 type PaneKey = "ruta" | "rutinas" | "cargas" | "nutricion" | "reglas";
 const TABS: { key: PaneKey; label: string }[] = [
@@ -289,25 +290,16 @@ function Rutinas() {
 }
 
 // ── Cargas (calculadora sin conexión) ───────────────────
-const CALC_GROUPS: [string, string, RoutineKey, string[]][] = [
-  ["Básicos · pirámide inversa", "1", "A", ["inc", "ohp"]],
-  ["Básicos · pirámide inversa", "1", "B", ["jal"]],
-  ["Piernas · Kino rep", "1", "B", ["bul", "rdl"]],
-  ["Accesorios · pirámide inversa", "1", "A", ["tri"]],
-  ["Accesorios · pirámide inversa", "1", "B", ["ham"]],
-  ["Fase 2", "2", "A", ["inc_db", "dip_w"]],
-  ["Fase 2", "2", "B", ["jal_pr", "curl_inc", "box", "sl_rdl"]],
-];
+type CalcOption = { phase: 1 | 2; key: RoutineKey; ex: ResolvedExercise };
 
-function calcOptions(): { group: string; ex: ResolvedExercise }[] {
-  const out: { group: string; ex: ResolvedExercise }[] = [];
-  for (const [group, tpl, key, ids] of CALC_GROUPS) {
-    const r = ROUTINES.find((x) => String(x.templatePhase) === tpl && x.key === key)!;
-    for (const id of ids) {
-      const t = r.exercises.find((e) => e.exerciseId === id);
-      if (t) out.push({ group, ex: resolveExercise(t) });
+/** Los ejercicios calibrables de cada fase, en el orden del Workout A y luego el B. */
+function calcOptions(): CalcOption[] {
+  const out: CalcOption[] = [];
+  for (const phase of [1, 2] as const)
+    for (const key of ["A", "B"] as const) {
+      const r = ROUTINES.find((x) => x.templatePhase === phase && x.key === key);
+      for (const t of r?.exercises ?? []) if (t.calibratable) out.push({ phase, key, ex: resolveExercise(t) });
     }
-  }
   return out;
 }
 
@@ -346,28 +338,60 @@ export function RirPicker({ value, onChange }: { value: number; onChange: (v: nu
   );
 }
 
+function ExerciseChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const { c } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: on }}
+      style={{
+        borderWidth: 1,
+        borderColor: on ? c.accent : c.line,
+        backgroundColor: on ? c.accent : c.surface,
+        borderRadius: 999,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+      }}
+    >
+      <T style={{ fontFamily: F.semibold, fontSize: 14, color: on ? c.onAccent : c.fg }}>{label}</T>
+    </Pressable>
+  );
+}
+
 function Cargas() {
   const { c } = useTheme();
   const { wide, width } = useLayout();
+  const { me } = useAuth();
   const options = useMemo(calcOptions, []);
-  const [id, setId] = useState("inc");
+  // Arranca en la fase que toca (la 3 repite la plantilla de la 1).
+  const [phase, setPhase] = useState<1 | 2>(() => {
+    const pos = programPosition(new Date(), me?.profile.programStartDate, me?.profile.timezone);
+    return !pos.beforeStart && !pos.finished && pos.phase.templatePhase === 2 ? 2 : 1;
+  });
+  const [id, setId] = useState(() => options.find((o) => o.phase === phase)!.ex.exerciseId);
   const [w, setW] = useState("60");
   const [r, setR] = useState("6");
   const [rir, setRir] = useState(1);
-  const ex = options.find((o) => o.ex.exerciseId === id)?.ex ?? options[0].ex;
+  const sel = options.find((o) => o.ex.exerciseId === id) ?? options[0];
+  const ex = sel.ex;
   const weight = parseFloat(w.replace(",", ".")) || 0;
   const reps = parseInt(r, 10) || 0;
   const res = calibrate(ex, { weightKg: weight, reps, rir });
   const e = res.e1rmKg;
   const kino = ex.scheme === "kino";
   const warm = kino ? [] : (ex.warmup ?? DEFAULT_WARMUP);
-  const unit = ex.exercise.equipment === "mancuernas" ? " por mano" : "";
+  const perHand = ex.exercise.equipment === "mancuernas";
   const barra = ex.exercise.equipment === "barra";
+  const step = stepOf(ex.exercise);
+  const bump = (s: string, by: number) => fk(Math.max(0, Math.round(((parseFloat(s.replace(",", ".")) || 0) + by) * 100) / 100));
+  // Pantallas angostas: peso y reps apilados y la tabla como lista de dos columnas.
+  const narrow = width < 560;
   const pct = (x: number) => (e > 0 ? `${Math.round((x / e) * 100)} %` : "—");
   const rows = [
     ...warm.map(([p, rr], i) => {
       const x = round(res.loads[0] * p, stepOf(ex.exercise));
-      return { label: `${width < 520 ? "Calent." : "Calentamiento"} ${i + 1}`, sub: null as string | null, reps: String(rr), pct: pct(x), load: x, strong: false };
+      return { label: `Calentamiento ${i + 1}`, sub: null as string | null, reps: String(rr), pct: pct(x), load: x, strong: false };
     }),
     ...ex.sets.map((s, k) => ({
       label: `Serie ${k + 1}`,
@@ -378,48 +402,49 @@ function Cargas() {
       strong: true,
     })),
   ];
-  let lastGroup = "";
+  const pickPhase = (p: 1 | 2) => {
+    setPhase(p);
+    setId(options.find((o) => o.phase === p)!.ex.exerciseId);
+  };
+
   return (
     <Card>
       <CardHead title="Calculadora de cargas" right="1RM estimado · fórmula de Epley" />
-      <View style={{ flexDirection: wide ? "row" : "column", gap: 16 }}>
-        {/* flex solo en dos columnas: apiladas, flex repartiría la altura y dejaría huecos. */}
-        <View style={{ flex: wide ? 1 : undefined, gap: 12, minWidth: 0 }}>
-          <T style={{ fontFamily: F.semibold, fontSize: 13 }}>Ejercicio</T>
-          <View style={{ gap: 8 }}>
-            {options.map((o) => {
-              const head = o.group !== lastGroup ? o.group : null;
-              lastGroup = o.group;
-              const on = o.ex.exerciseId === id;
-              return (
-                <View key={o.ex.exerciseId} style={{ gap: 6 }}>
-                  {head ? (
-                    <T v="eyebrow" style={{ marginTop: 4 }}>
-                      {head}
-                    </T>
-                  ) : null}
-                  <Pressable
-                    onPress={() => setId(o.ex.exerciseId)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: on }}
-                    style={{
-                      borderWidth: 1.5,
-                      borderColor: on ? c.accent : c.line,
-                      backgroundColor: on ? c.accentSoft : c.surface,
-                      borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 9,
-                    }}
-                  >
-                    <T style={{ fontFamily: on ? F.semibold : F.regular, fontSize: 14 }}>{o.ex.exercise.name}</T>
-                  </Pressable>
-                </View>
-              );
-            })}
+      <View style={{ flexDirection: wide ? "row" : "column", gap: wide ? 28 : 20 }}>
+        {/* Entrada: ejercicio y serie de prueba. flex solo en dos columnas (apiladas dejaría huecos). */}
+        <View style={{ flex: wide ? 1 : undefined, gap: 16, minWidth: 0 }}>
+          <View style={{ gap: 10 }}>
+            <Seg
+              label="Fase"
+              value={String(phase) as "1" | "2"}
+              onChange={(k) => pickPhase(k === "2" ? 2 : 1)}
+              options={[
+                { key: "1", label: "Fase 1", sub: "semanas 1–8 y 17–24" },
+                { key: "2", label: "Fase 2", sub: "semanas 9–16" },
+              ]}
+            />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }} accessibilityRole="radiogroup" accessibilityLabel="Ejercicio">
+              {options
+                .filter((o) => o.phase === phase)
+                .map((o) => (
+                  <ExerciseChip key={o.ex.exerciseId} label={shortName(o.ex.exercise.name)} on={o.ex.exerciseId === id} onPress={() => setId(o.ex.exerciseId)} />
+                ))}
+            </View>
+            <View style={{ gap: 2 }}>
+              <T style={{ fontFamily: F.bold, fontSize: 16 }}>{ex.exercise.name}</T>
+              <T v="small" muted>
+                Workout {sel.key} · {SCHEME_NAME[ex.scheme]} · {setsText(ex)}
+              </T>
+            </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Field label="Peso de la prueba (kg)" value={w} onChangeText={setW} keyboardType="decimal-pad" />
-            <Field label="Reps hechas" value={r} onChangeText={setR} keyboardType="number-pad" />
+          <View style={{ flexDirection: narrow ? "column" : "row", gap: 12 }}>
+            <Stepper
+              label={perHand ? "Peso de la prueba (kg por mano)" : "Peso de la prueba (kg)"}
+              value={w}
+              onChangeText={setW}
+              onStep={(d) => setW(bump(w, d * step))}
+            />
+            <Stepper label="Reps hechas" value={r} keyboardType="number-pad" onChangeText={setR} onStep={(d) => setR(bump(r, d))} />
           </View>
           <RirPicker value={rir} onChange={setRir} />
           <T v="small" muted>
@@ -427,77 +452,121 @@ function Cargas() {
             máximo real.
           </T>
         </View>
-        <View style={{ flex: wide ? 1.3 : undefined, gap: 12, minWidth: 0 }}>
+
+        {/* Resultado */}
+        <View style={{ flex: wide ? 1.2 : undefined, gap: 12, minWidth: 0 }}>
           <View
             style={{
               flexDirection: "row",
               flexWrap: "wrap",
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: "flex-end",
               gap: 12,
               padding: 14,
               borderWidth: 1,
-              borderStyle: "dashed",
-              borderColor: c.accent,
-              borderRadius: 8,
+              borderColor: res.reliable ? c.accent : c.bad,
+              borderRadius: R,
               backgroundColor: c.accentSoft,
             }}
           >
             <View>
-              <T v="eyebrow">1RM estimado</T>
-              <T style={{ fontFamily: F.extrabold, fontSize: 30, lineHeight: 34 }} num>
-                {fk(Math.round(e * 2) / 2)} kg
+              <T v="eyebrow" color={c.accentInk}>
+                1RM estimado
+              </T>
+              <T num style={{ fontFamily: F.extrabold, fontSize: 36, lineHeight: 40, letterSpacing: -0.8, color: res.reliable ? c.accentInk : c.bad }}>
+                {e > 0 ? fk(Math.round(e * 2) / 2) : "—"}
+                <T style={{ fontFamily: F.bold, fontSize: 17, color: res.reliable ? c.accentInk : c.bad }}> kg</T>
               </T>
             </View>
-            <T v="small" muted num>
+            <T v="small" muted num style={{ paddingBottom: 4 }}>
               {reps + rir <= 1 ? "1 rep al fallo = tu 1RM real" : `${fk(weight)} × (1 + ${reps + rir} ÷ 30)`}
             </T>
           </View>
-          <View>
-            <View style={{ flexDirection: "row", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: c.line }}>
-              {["Serie", "Reps", "% 1RM", `Carga${unit}`].map((h, i) => (
-                <T key={h} v="eyebrow" style={{ flex: i === 0 ? 1.4 : i === 3 ? 1.5 : 0.8 }}>
-                  {h}
-                </T>
+          {narrow ? (
+            <View>
+              {rows.map((x, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingVertical: 10,
+                    borderBottomWidth: i === rows.length - 1 ? 0 : 1,
+                    borderBottomColor: c.line,
+                  }}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <T style={{ fontFamily: x.strong ? F.bold : F.medium, fontSize: 15, color: x.strong ? c.fg : c.muted }}>{x.label}</T>
+                    <T v="small" muted num>
+                      {x.reps} reps · {x.pct}
+                      {x.sub ? ` · ${x.sub}` : ""}
+                    </T>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <T num style={{ fontFamily: x.strong ? F.extrabold : F.semibold, fontSize: x.strong ? 18 : 15 }}>
+                      {fk(x.load)} kg
+                    </T>
+                    {barra ? (
+                      <T v="small" muted num>
+                        {platesText(x.load)}
+                      </T>
+                    ) : perHand ? (
+                      <T v="small" muted>
+                        por mano
+                      </T>
+                    ) : null}
+                  </View>
+                </View>
               ))}
             </View>
-            {rows.map((x, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: "row",
-                  paddingVertical: 10,
-                  borderBottomWidth: i === rows.length - 1 ? 0 : 1,
-                  borderBottomColor: c.line,
-                }}
-              >
-                <View style={{ flex: 1.4 }}>
-                  <T style={{ fontFamily: x.strong ? F.bold : F.regular, fontSize: 14 }}>{x.label}</T>
-                  {x.sub ? (
-                    <T v="small" muted>
-                      {x.sub}
-                    </T>
-                  ) : null}
-                </View>
-                <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>
-                  {x.reps}
-                </T>
-                <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>
-                  {x.pct}
-                </T>
-                <View style={{ flex: 1.5 }}>
-                  <T num style={{ fontFamily: x.strong ? F.bold : F.medium, fontSize: 14 }}>
-                    {fk(x.load)} kg
+          ) : (
+            <View>
+              <View style={{ flexDirection: "row", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: c.line }}>
+                {["Serie", "Reps", "% 1RM", `Carga${perHand ? " por mano" : ""}`].map((h, i) => (
+                  <T key={h} v="eyebrow" style={{ flex: i === 0 ? 1.4 : i === 3 ? 1.5 : 0.8 }}>
+                    {h}
                   </T>
-                  {barra ? (
-                    <T v="small" muted>
-                      {platesText(x.load)}
-                    </T>
-                  ) : null}
-                </View>
+                ))}
               </View>
-            ))}
-          </View>
+              {rows.map((x, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: "row",
+                    paddingVertical: 10,
+                    borderBottomWidth: i === rows.length - 1 ? 0 : 1,
+                    borderBottomColor: c.line,
+                  }}
+                >
+                  <View style={{ flex: 1.4 }}>
+                    <T style={{ fontFamily: x.strong ? F.bold : F.regular, fontSize: 14 }}>{x.label}</T>
+                    {x.sub ? (
+                      <T v="small" muted>
+                        {x.sub}
+                      </T>
+                    ) : null}
+                  </View>
+                  <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>
+                    {x.reps}
+                  </T>
+                  <T v="small" num style={{ flex: 0.8, fontFamily: F.medium }}>
+                    {x.pct}
+                  </T>
+                  <View style={{ flex: 1.5 }}>
+                    <T num style={{ fontFamily: x.strong ? F.bold : F.medium, fontSize: 14 }}>
+                      {fk(x.load)} kg
+                    </T>
+                    {barra ? (
+                      <T v="small" muted>
+                        {platesText(x.load)}
+                      </T>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
           <T v="small" muted>
             {reps + rir} = {reps} reps hechas + {rir} en reserva.{" "}
             {kino
