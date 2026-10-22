@@ -15,7 +15,7 @@ Entorno: Node 22 antes de `pnpm`. Con fnm: `eval "$(fnm env)"; fnm use 22`. Con 
 | M6 · App: Entrenar | ✅ web (demo) · 🟡 DB | Entreno completo probado de punta a punta con el modo demo. 11 tests de lógica. |
 | M7 · App: Progreso | ✅ web (demo) · 🟡 DB | Todas las sub-pestañas, estados vacíos, modo demo. |
 | M8 · Reporte + PR | ✅ | `docs/REPORTE_NOCHE.md`, `docs/capturas/` (build local), PR abierto. Smoke test OK contra production en Render; login web con cookie y CSRF probados. |
-| M9 · EAS | ✅ | TestFlight: build 1 (`demo`, sin servidor) y **build 2 (1.0.0, `production`, API de Render)**, enviado el 21-oct a App Store Connect sin modo interactivo. Falta probarlo en el iPhone. |
+| M9 · EAS | ✅ | TestFlight: build 1 (`demo`, sin servidor) y builds 2–4 (1.0.0, `production`, API de Render), enviados el 21-oct sin modo interactivo. El build 4 trae la tarjeta del 1RM, la calculadora de cargas nueva y el peso sin decimal cortado. Renzo ya entrenó con el build 2. |
 
 **TestFlight:** `cd apps/mobile && npx eas-cli@latest build -p ios --profile production --auto-submit --non-interactive` (no pide nada).
 
