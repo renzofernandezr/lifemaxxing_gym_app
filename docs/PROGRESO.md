@@ -21,6 +21,6 @@ Entorno: Node 22 antes de `pnpm`. Con fnm: `eval "$(fnm env)"; fnm use 22`. Con 
 
 **Servidor:** production en Render, https://lifemaxxing-gym.onrender.com (web y API). Contraseña de Renzo en `.secrets/credenciales.txt`, solo en la PC de `~/Repositories`.
 
-**22-oct:** notas del gimnasio de Renzo aplicadas (ver `docs/BITACORA.md`). La API ya está desplegada; falta el build 5 de TestFlight, que lanza Renzo.
+**22-oct:** notas del gimnasio de Renzo aplicadas (ver `docs/BITACORA.md` y `docs/CONTEXTO_2026-10-22.md`). API y web desplegadas; TestFlight builds 5 y 6 (mismo commit `bd9da57`).
 
 **Próxima acción:** antes del 21-nov-2026 decidir qué hacer con la Postgres gratis: pasarla a pago o exportar los datos y recrearla. Si no, Render la borra tras 14 días de gracia (~5-dic). Pendiente también: los tests de integración de la API, que necesitan una DB `dev`.

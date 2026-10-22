@@ -41,10 +41,20 @@ Respuestas de Renzo a las preguntas: sentadilla con barra (no búlgara con barra
   - Hoja Saltar y serie saltada atenuada.
   - "↑ Subimos 5 kg" tras 11 reps en un rango de 6–8.
 
-### 4. Pendientes
+### 4. Después: análisis, TestFlight y contexto
 
-- **Build 5 de TestFlight**: el modo automático de Claude Code bloqueó `eas build --auto-submit`; lo lanza Renzo con el comando de `CLAUDE.md`.
-- Probar en el iPhone: el fundido de las fotos, el descanso nuevo y el ajuste automático con datos reales.
+- Renzo pidió opinión sobre su primer Workout B. El análisis completo y lo que pedirá la app el lunes 26-oct están en `docs/CONTEXTO_2026-10-22.md` §6.
+- Se le ofreció suavizar la regla de bajar: que solo baje si faltan 2 reps o más. Sin respuesta todavía.
+- TestFlight:
+  - El build 5 lo lanzó Renzo (commit `bd9da57`, terminó a la 1:19 Lima).
+  - A su pedido ("compila en testflight y en la web"), Claude lanzó el build 6 del mismo commit, con envío automático.
+  - La web de producción ya estaba al día desde el deploy.
+- `docs/CONTEXTO_2026-10-22.md`: todo el contexto de la sesión en un archivo.
+
+### 5. Pendientes
+
+- Probar en el iPhone (build 5 o 6): el fundido de las fotos, el descanso nuevo y el ajuste automático con datos reales.
+- Decidir la regla de bajar con 1 rep faltante.
 - Siguen los de antes: Postgres gratis hasta el 21-nov, cambio de contraseña y modo avión con la API real.
 
 ## 21–22 oct 2026 · Render, TestFlight con la API y primer entreno real

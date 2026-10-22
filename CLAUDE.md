@@ -3,7 +3,7 @@
 ## Reglas
 
 - Plan completo de construcción: `docs/PLAN_APP_RN.md`. Síguelo hito por hito.
-- Antes de hacer nada en una sesión nueva, lee `docs/PROGRESO.md`, `docs/DECISIONES.md` y `docs/BITACORA.md` (qué se hizo en cada sesión, con commits y pendientes) y continúa desde lo último pendiente.
+- Antes de hacer nada en una sesión nueva, lee `docs/PROGRESO.md`, `docs/DECISIONES.md` y `docs/BITACORA.md` (qué se hizo en cada sesión, con commits y pendientes) y continúa desde lo último pendiente. El contexto completo de la sesión del 22-oct (notas del gimnasio, análisis del primer Workout B, reglas de cargas) está en `docs/CONTEXTO_2026-10-22.md`.
 - Al cerrar una sesión de trabajo, agrega su resumen a `docs/BITACORA.md`.
 - Referencia de diseño y lógica: `index.html` (prototipo). No lo borres.
 - Dominio (rutina, progresión, calibración, nutrición): `docs/rutina-fase1.md`.
@@ -23,9 +23,10 @@
 - **Notas del gimnasio de Renzo (22-oct), aplicadas**: descansos de 2 min y 1:30, mancuernas de 2 en 2, ajuste automático de cargas (mismo día y próxima sesión), descanso que motiva, fotos animadas en Técnica, vuelve Saltar, sentadilla con barra en lugar de la búlgara y jalón con brazos rectos en lugar de face pulls. Sus 3 × 8 de sentadilla con 40 kg del 21-oct quedaron registradas (migración 0005). Detalle en `docs/BITACORA.md`.
 - **Servidor en Render (plan gratis), solo production**: https://lifemaxxing-gym.onrender.com. Las migraciones, el usuario de Renzo y el smoke test están hechos, y hay auto-deploy desde GitHub. Detalle en "Servidor (Render)" más abajo.
   - No hay entorno `dev`, porque Render gratis da una sola Postgres. Por eso `pnpm test` falla en `apps/api` con "Falta DEV_DATABASE_URL", y es lo esperado.
-- **TestFlight**: el último build es el 4 (1.0.0) con la API real. Los cambios del 22-oct en la app necesitan el **build 5**, que lanza Renzo (ver "TestFlight"); la API ya los tiene desde el deploy.
+- **TestFlight**: los builds 5 y 6 (1.0.0, commit `bd9da57`) traen todo lo del 22-oct; son idénticos (el 5 lo lanzó Renzo y el 6 Claude a su pedido). La API y la web de producción ya lo tienen desde el deploy.
 - **Pendientes**:
-  - Lanzar el build 5 y probar en el iPhone: el descanso nuevo, Saltar, el ajuste automático y las fotos de Técnica.
+  - Probar en el iPhone: el descanso nuevo, Saltar, el ajuste automático y las fotos de Técnica.
+  - Respuesta de Renzo: ¿bajar el peso solo cuando falten 2 reps o más del mínimo? Hoy baja con 1 (ver `docs/CONTEXTO_2026-10-22.md` §4). No cambiarlo sin que lo pida.
   - La Postgres gratis caduca el **21-nov-2026**.
   - La app no permite cambiar la contraseña.
   - Falta confirmar en el iPhone el arreglo del decimal del peso (build 4).
@@ -70,7 +71,7 @@
   - Proyecto EAS: `22fdf9a2-a1c1-45a3-b7f2-aec14b9ba6ca`, owner `renzofernandezg`.
   - Bundle: `com.renzofernandez.lifemaxxinggym`. App Store Connect: `ascAppId` 6825488682 (está en `eas.json`).
   - Nombre: "Life Maxxing".
-- **Lo lanza Renzo**: el modo automático de Claude Code bloquea `eas build --auto-submit` (lo trata como transacción real). Dale el comando en vez de intentarlo.
+- **Cuándo lanzarlo**: el modo automático de Claude Code bloquea `eas build --auto-submit` si Claude lo intenta por su cuenta (lo trata como transacción real). Solo lánzalo cuando Renzo lo pida explícitamente ("compila en testflight"); si no, dale el comando. Antes revisa `eas build:list -p ios --limit 3`: si ya hay un build del mismo commit, no repitas.
 - **Comando** (ya no pide nada: los certificados están en EAS y el `ascAppId` en `eas.json`):
   ```
   cd apps/mobile && npx eas-cli@latest build -p ios --profile production --auto-submit --non-interactive
